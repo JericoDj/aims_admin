@@ -1,4 +1,5 @@
 
+import 'package:aims_admin/screens/manage_account/manage_accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../utils/colors.dart';
@@ -59,7 +60,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           Get.to(() => GenerateQRCodeScreen());
                         }),
 
-                        SizedBox(height: 50), // Extra space for scrolling
+                        SizedBox(height: 80), // Extra space for scrolling
+
+
+                        buildButton("MANAGE ACCOUNTS", MyColors.orange, MyColors.red, () {
+                          Get.to(() => ManageAccounts());
+                        }),
+
+
+                        SizedBox(height: 30), // Extra space for scrolling
 
                         Text("Version: ${AppVersion.version} (Build: ${AppVersion.build})",
                           style: TextStyle(color: Colors.grey, fontSize: 16),
@@ -228,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
           elevation: 0,
           padding: EdgeInsets.symmetric(horizontal: 50, vertical: 16), // Increased padding
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(5),
             side: BorderSide(color: borderColor, width: 2),
           ),
         ),

@@ -87,6 +87,7 @@ class StockRoomScreen extends StatelessWidget {
                           color: Colors.white,
                           size: 100,
                         ),
+
                       ),
                     ),
                     SizedBox(height: 5),
