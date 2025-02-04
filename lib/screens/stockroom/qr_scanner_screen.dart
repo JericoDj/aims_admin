@@ -9,32 +9,52 @@ class QRScannerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        backgroundColor: Colors.white,
         appBar: AppBar(
           toolbarHeight: 70,
-          backgroundColor: MyColors.red,
+          backgroundColor: MyColors.white,
           centerTitle: true,
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Container(
+              height: 40, // Adjusted container size (small but fits icon)
+              width: 40,  // Ensure it's a perfect square
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: MyColors.darkRed,
+              ),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back, color: MyColors.white, size: 28), // Increased icon size
+                padding: EdgeInsets.zero, // Removes extra padding inside the button
+                constraints: BoxConstraints(), // Prevents extra spacing issues
+                onPressed: () {
+                  Get.back();
+                },
+              ),
+            ),
+          ),
           title: Text(
             "QR SCANNER",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white), // White back button
-            onPressed: () {
-              Get.back(); // Navigates back
-            },
+            style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold, fontSize: 28),
           ),
         ),
         body: Center(
           child: ElevatedButton(
+
             onPressed: () {
               // Simulate QR Scan & Show Dialog
               showItemDialog(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: MyColors.red,
+
+              backgroundColor: MyColors.darkRed,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(10))
+              ),
+
               padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             ),
-            child: Text("Simulate Scan", style: TextStyle(color: Colors.white,fontSize: 18)),
+            child: Text("Simulate Scan", style: TextStyle(color: Colors.white,fontSize: 22)),
           ),
         ),
       ),
@@ -52,7 +72,7 @@ class QRScannerScreen extends StatelessWidget {
         return AlertDialog(
           title: Text(
             "ADD ITEM",
-            style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red),
+            style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red, fontSize: 24),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -71,30 +91,38 @@ class QRScannerScreen extends StatelessWidget {
                 SizedBox(height: 10),
 
                 // Quantity Input Field
-                Text("Enter Quantity", style: TextStyle(fontWeight: FontWeight.bold)),
+                Text("Enter Quantity", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: MyColors.red)),
                 TextField(
                   controller: quantityController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     hintText: "Enter quantity",
+                    hintStyle: TextStyle(fontSize: 18), // Adjust hint text size
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 12), // Adjust padding for field size
                   ),
+                  style: TextStyle(fontSize: 18), // Adjust text size inside TextField
                 ),
 
                 SizedBox(height: 10),
 
-                // Expiration Date Input Field
-                Text("Enter Expiration Date", style: TextStyle(fontWeight: FontWeight.bold)),
+// Expiration Date Input Field
+                Text(
+                  "Enter Expiration Date",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: MyColors.red), // Adjust label text size
+                ),
                 TextField(
                   controller: expirationController,
                   keyboardType: TextInputType.datetime,
                   decoration: InputDecoration(
                     hintText: "YYYY-MM-DD",
+                    hintStyle: TextStyle(fontSize: 18), // Adjust hint text size
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 12), // Adjust padding for field size
                   ),
+                  style: TextStyle(fontSize: 18), // Adjust text size inside TextField
                 ),
+
               ],
             ),
           ),
@@ -117,7 +145,7 @@ class QRScannerScreen extends StatelessWidget {
 
                 Navigator.pop(context); // Close dialog
               },
-              child: Text("ADD", style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold)),
+              child: Text("ADD", style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold, fontSize: 18)),
             ),
 
             // Close Button
@@ -125,7 +153,7 @@ class QRScannerScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pop(context); // Close dialog
               },
-              child: Text("CLOSE", style: TextStyle(color: MyColors.red)),
+              child: Text("CLOSE", style: TextStyle(color: MyColors.red, fontSize: 18)),
             ),
           ],
         );
@@ -141,8 +169,8 @@ class QRScannerScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
-          Text(value, style: TextStyle(color: MyColors.red)),
+          Text(label, style: TextStyle(fontWeight: FontWeight.bold,fontSize: 18)),
+          Text(value, style: TextStyle(color: MyColors.darkRed, fontSize: 18)),
         ],
       ),
     );

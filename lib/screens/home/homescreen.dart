@@ -1,4 +1,3 @@
-
 import 'package:aims_admin/screens/manage_account/manage_accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,7 +7,6 @@ import '../authentication/loginscreen.dart';
 import '../generateqr/genearateqrscreen.dart';
 import '../stockroom/stockroom.dart';
 import '../treatmentarea/treatmentareascreen.dart';
-
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -26,61 +24,94 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: MyColors.white,
         body: Stack(
           children: [
+            // Background Image
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/login_background/homepage_background.png',
+                fit: BoxFit.fitWidth,
+              ),
+            ),
+
+            // Main Content
             Column(
               children: [
                 _buildAppBar(),
                 Expanded(
-                  child: SingleChildScrollView( // ✅ Makes content scrollable
+                  child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       children: [
-                        SizedBox(height: 20),
-
-                        // Bigger Logo
                         Image.asset(
                           'assets/images/logo/logo.png',
-                          height: 200, // Increased size
+                          height: 165,
                         ),
-                        SizedBox(height: 36),
-
-                        // Stock Room Button
-                        buildButton("STOCK ROOM", MyColors.orange, MyColors.red, () {
-                          Get.to(() => StockRoomScreen());
-                        }),
-                        SizedBox(height: 20),
-
-                        // Treatment Area Button
-                        buildButton("TREATMENT AREA", MyColors.orange, MyColors.red, () {
-                          Get.to(() => TreatmentAreaScreen());
-                        }),
-                        SizedBox(height: 20),
-
-                        // Generate QR Code Button
-                        buildButton("GENERATE QR CODE", MyColors.orange, MyColors.red, () {
-                          Get.to(() => GenerateQRCodeScreen());
-                        }),
-
-                        SizedBox(height: 80), // Extra space for scrolling
-
-
-                        buildButton("MANAGE ACCOUNTS", MyColors.orange, MyColors.red, () {
-                          Get.to(() => ManageAccounts());
-                        }),
-
-
-                        SizedBox(height: 30), // Extra space for scrolling
-
-                        Text("Version: ${AppVersion.version} (Build: ${AppVersion.build})",
-                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                        SizedBox(height: 10),
+                        Text(
+                          "AIMS",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-
+                        SizedBox(height: 20),
+                        buildButton("STOCK ROOM", MyColors.white, MyColors.red,
+                                () => Get.to(() => StockRoomScreen())),
+                        SizedBox(height: 20),
+                        buildButton("TREATMENT AREA", MyColors.white, MyColors.red,
+                                () => Get.to(() => TreatmentAreaScreen())),
+                        SizedBox(height: 20),
+                        buildButton("GENERATE QR CODE", MyColors.white, MyColors.red,
+                                () => Get.to(() => GenerateQRCodeScreen())),
+                        SizedBox(height: 80),
                       ],
                     ),
                   ),
                 ),
-
-
               ],
+            ),
+
+            // Bottom Buttons (Fixed Position)
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 80),
+                    child: GestureDetector(
+                      onTap: () => Get.to(() => ManageAccounts()),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: MyColors.orange,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: Colors.black),
+                        ),
+                        child: Center(
+                          child: Text(
+                            "MANAGE ACCOUNTS",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 30),
+                  Text(
+                    "Version: ${AppVersion.version} (Build: ${AppVersion.build})",
+                    style: TextStyle(color: Colors.black, fontSize: 16),
+                  ),
+                ],
+              ),
             ),
 
             // Notification Drawer
@@ -91,25 +122,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// **🔹 Custom AppBar**
   Widget _buildAppBar() {
     return Container(
-      color: MyColors.red,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: MyColors.white,
+      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // **🔔 Notification Button**
           Stack(
             children: [
               IconButton(
-                icon: Icon(Icons.notifications, color: Colors.white, size: 28),
-                onPressed: () {
-                  setState(() {
-                    isNotificationDrawerOpen = !isNotificationDrawerOpen;
-                    hasNotification = false;
-                  });
-                },
+                icon: Icon(Icons.notifications, color: Colors.black, size: 36),
+                onPressed: () => setState(() {
+                  isNotificationDrawerOpen = !isNotificationDrawerOpen;
+                  hasNotification = false;
+                }),
               ),
               if (hasNotification)
                 Positioned(
@@ -119,47 +146,36 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white),
-                      color: MyColors.orange,
+                      border: Border.all(color: Colors.redAccent),
+                      color: MyColors.red,
                       shape: BoxShape.circle,
                     ),
                   ),
                 ),
             ],
           ),
-
-          // **📛 App Title**
-          Text(
-            "AIMS",
-            style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-
-          // **🔑 Logout Button**
           IconButton(
-            style: ButtonStyle(iconSize: WidgetStatePropertyAll(28)),
-            icon: Icon(Icons.logout, color: Colors.white,),
+            icon: Icon(Icons.logout, color: Colors.black, size: 28),
             onPressed: _showLogoutDialog,
           ),
-
-
         ],
       ),
     );
   }
 
-  /// **🔹 Notification Drawer**
   Widget _buildNotificationDrawer() {
     return Positioned(
       top: 60,
       left: 0,
       right: 0,
       child: Material(
+
         elevation: 5,
-        color: MyColors.white,
         child: Container(
+          height: 250,
           padding: EdgeInsets.all(16),
-          height: 250, // Increased height
           decoration: BoxDecoration(
+            color: MyColors.white,
             border: Border.all(color: MyColors.red),
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
           ),
@@ -167,23 +183,24 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 "🔔 Notifications",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: MyColors.red),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: MyColors.red,
+                ),
               ),
-              SizedBox(height: 10),
               Divider(color: MyColors.red),
-
-              // **📩 Sample Notifications**
               ListTile(
                 leading: Icon(Icons.info, color: MyColors.orange),
-                title: Text("New update available!", style: TextStyle(color: MyColors.red)),
+                title: Text("New update available!",
+                    style: TextStyle(color: MyColors.red)),
                 subtitle: Text("Tap to update"),
-                onTap: () {},
               ),
               ListTile(
                 leading: Icon(Icons.check_circle, color: MyColors.orange),
-                title: Text("Backup Completed", style: TextStyle(color: MyColors.red)),
+                title: Text("Backup Completed",
+                    style: TextStyle(color: MyColors.red)),
                 subtitle: Text("Your inventory is safe"),
-                onTap: () {},
               ),
             ],
           ),
@@ -192,56 +209,57 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// **🔹 Logout Confirmation Dialog**
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Logout", style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold)),
-          content: Text("Are you sure you want to log out?"),
-          actions: [
-            // ❌ FIXED: "Cancel" should only close the dialog, not log out
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Closes the dialog
-              },
-              child: Text("Cancel", style: TextStyle(color: MyColors.red)),
-            ),
-
-            // ✅ "Logout" should clear navigation and go to LoginScreen
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog first
-                Get.offAll(() => LoginScreen()); // ✅ Now properly navigates to LoginScreen
-              },
-              child: Text("Logout", style: TextStyle(color: MyColors.orange, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: Text("Logout",
+            style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold)),
+        content: Text("Are you sure you want to log out?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel", style: TextStyle(color: MyColors.red)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Get.offAll(() => LoginScreen());
+            },
+            child: Text("Logout",
+                style: TextStyle(color: MyColors.orange, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
-
-  /// **🔹 Custom Button Builder**
   Widget buildButton(String text, Color textColor, Color borderColor, VoidCallback onPressed) {
-    return Container(
-      width: double.infinity, // Make buttons full-width
-      padding: EdgeInsets.symmetric(horizontal: 20),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          elevation: 0,
-          padding: EdgeInsets.symmetric(horizontal: 50, vertical: 16), // Increased padding
+          backgroundColor: MyColors.red,
+          padding: EdgeInsets.symmetric(vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5),
             side: BorderSide(color: borderColor, width: 2),
           ),
         ),
-        child: Text(text, style: TextStyle(fontSize: 18, color: textColor, fontWeight: FontWeight.bold)), // Increased text size
+        child: SizedBox(
+          width: double.infinity,
+          child: Center(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 20,
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
