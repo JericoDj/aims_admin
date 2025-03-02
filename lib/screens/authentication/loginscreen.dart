@@ -3,7 +3,7 @@ import 'package:aims_admin/repository/authentication_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../../utils/colors.dart';
 import '../../../utils/version.dart';
 import '../home/homescreen.dart';
@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 20),
                       Text(
                         "AIMS",
-                        style: GoogleFonts.roboto(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: MyColors.white,
                           fontSize: 36,
@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       Text(
                         "ADMIN APP",
-                        style: GoogleFonts.roboto(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: MyColors.orange,
                           fontSize: 20,
@@ -126,10 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Email text field with violet input text and label
                       TextField(
                         controller: _emailController,
-                        style: GoogleFonts.roboto(color: MyColors.white),
+                        style: TextStyle(color: MyColors.white),
                         decoration: InputDecoration(
                           labelText: 'Email',
-                          labelStyle: GoogleFonts.roboto(fontSize: 18, color: MyColors.orange, fontWeight: FontWeight.bold),
+                          labelStyle: TextStyle(fontSize: 18, color: MyColors.orange, fontWeight: FontWeight.bold),
                           enabledBorder: OutlineInputBorder(
                             borderSide: BorderSide(color: MyColors.orange),
                           ),
@@ -144,10 +144,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextField(
                         controller: _passwordController,
                         obscureText: true,
-                        style: GoogleFonts.roboto(color: MyColors.white),
+                        style: TextStyle(color: MyColors.white),
                         decoration: InputDecoration(
                           labelText: 'Password',
-                          labelStyle: GoogleFonts.roboto(fontSize: 18, color: MyColors.orange,fontWeight: FontWeight.bold),
+                          labelStyle: TextStyle(fontSize: 18, color: MyColors.orange,fontWeight: FontWeight.bold),
                           enabledBorder: OutlineInputBorder(
                             borderSide: BorderSide(color: MyColors.orange),
                           ),
@@ -182,7 +182,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _login,
                           child: Text(
                             'LOG IN',
-                            style: GoogleFonts.roboto(color: MyColors.white, fontSize: 18,fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: MyColors.white, fontSize: 18,fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),

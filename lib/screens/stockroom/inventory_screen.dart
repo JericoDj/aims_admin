@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/colors.dart';
+
 class InventoryScreen extends StatefulWidget {
   @override
   _InventoryScreenState createState() => _InventoryScreenState();
@@ -9,31 +10,52 @@ class InventoryScreen extends StatefulWidget {
 
 class _InventoryScreenState extends State<InventoryScreen> {
   TextEditingController searchController = TextEditingController();
-  List<Map<String, String>> allItems = [
-    {"serial": "SN1001", "name": "Medical Syringe", "stock": "25", "unit": "Box", "category": "Medical Supplies"},
-    {"serial": "SN1002", "name": "Gloves", "stock": "50", "unit": "Pack", "category": "Safety Equipment"},
-    {"serial": "SN1003", "name": "Face Mask", "stock": "100", "unit": "Box", "category": "Safety Equipment"},
-    {"serial": "SN1004", "name": "Alcohol", "stock": "75", "unit": "Bottle", "category": "Sanitation"},
-    {"serial": "SN1005", "name": "Bandage", "stock": "40", "unit": "Roll", "category": "First Aid"},
-  ];
-
-  List<Map<String, String>> filteredItems = [];
+  List<Map<String, dynamic>> allItems = []; // Stores Firestore data
+  List<Map<String, dynamic>> filteredItems = []; // Filtered data
 
   @override
   void initState() {
     super.initState();
-    filteredItems = List.from(allItems);
+    fetchInventory(); // Fetch Firestore data
   }
 
+  /// **Fetch Inventory Items from Firestore**
+  Future<void> fetchInventory() async {
+    try {
+      QuerySnapshot querySnapshot =
+      await FirebaseFirestore.instance.collection("items").get();
+
+      List<Map<String, dynamic>> fetchedItems = querySnapshot.docs.map((doc) {
+        return {
+          "id": doc.id, // Store document ID for reference
+          "serial": doc["serial_no"] ?? "N/A",
+          "name": doc["item_name"] ?? "Unknown Item",
+          "stock": doc["stock"] ?? "0",
+          "unit": doc["unit_measurement"] ?? "Unit",
+          "category": doc["category"] ?? "Uncategorized",
+        };
+      }).toList();
+
+      setState(() {
+        allItems = fetchedItems;
+        filteredItems = fetchedItems;
+      });
+    } catch (e) {
+      print("❌ Error fetching inventory: $e");
+      Get.snackbar("Error", "Failed to load inventory.");
+    }
+  }
+
+  /// **Search Filter**
   void filterSearch(String query) {
     setState(() {
       if (query.isEmpty) {
         filteredItems = List.from(allItems);
       } else {
         filteredItems = allItems.where((item) {
-          return item["name"]!.toLowerCase().contains(query.toLowerCase()) ||
-              item["serial"]!.toLowerCase().contains(query.toLowerCase()) ||
-              item["category"]!.toLowerCase().contains(query.toLowerCase());
+          return item["name"].toString().toLowerCase().contains(query.toLowerCase()) ||
+              item["serial"].toString().toLowerCase().contains(query.toLowerCase()) ||
+              item["category"].toString().toLowerCase().contains(query.toLowerCase());
         }).toList();
       }
     });
@@ -51,16 +73,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
           leading: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Container(
-              height: 40, // Adjusted container size (small but fits icon)
-              width: 40,  // Ensure it's a perfect square
+              height: 40,
+              width: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: MyColors.darkRed,
               ),
               child: IconButton(
-                icon: Icon(Icons.arrow_back, color: MyColors.white, size: 36), // Increased icon size
-                padding: EdgeInsets.zero, // Removes extra padding inside the button
-                constraints: BoxConstraints(), // Prevents extra spacing issues
+                icon: Icon(Icons.arrow_back, color: MyColors.white, size: 36),
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(),
                 onPressed: () {
                   Get.back();
                 },
@@ -71,35 +93,44 @@ class _InventoryScreenState extends State<InventoryScreen> {
             "INVENTORY",
             style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold, fontSize: 28),
           ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.refresh, color: MyColors.red),
+              onPressed: fetchInventory, // Refresh inventory data
+            )
+          ],
         ),
         body: Column(
           children: [
             // Search Bar
-            Row(
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(10.0),
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: filterSearch,
-                    decoration: InputDecoration(
-                      hintText: "Search item...",
-                      hintStyle: TextStyle(fontSize: 20), // Adjust hint text size
-                      prefixIcon: Icon(Icons.search, color: MyColors.red, size: 24,),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: MyColors.red),
-                      ),
-                    ),
-                    style: TextStyle(fontSize: 18), // Adjust text size inside TextField
+            Padding(
+              padding: EdgeInsets.all(10.0),
+              child: TextField(
+                controller: searchController,
+                onChanged: filterSearch,
+                decoration: InputDecoration(
+                  hintText: "Search item...",
+                  hintStyle: TextStyle(fontSize: 20),
+                  prefixIcon: Icon(Icons.search, color: MyColors.red, size: 24),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: MyColors.red),
                   ),
                 ),
-              ],
+                style: TextStyle(fontSize: 18),
+              ),
             ),
 
-            // List of Inventory Items
+            // Inventory List
             Expanded(
-              child: ListView.builder(
+              child: filteredItems.isEmpty
+                  ? Center(
+                child: Text(
+                  "No items found.",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: MyColors.red),
+                ),
+              )
+                  : ListView.builder(
                 itemCount: filteredItems.length,
                 itemBuilder: (context, index) {
                   var item = filteredItems[index];
@@ -116,29 +147,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         children: [
                           Text(
                             "${item['name']}",
-                            style: TextStyle(
-                              fontSize: 22, // Adjust main item name size
-                              fontWeight: FontWeight.bold,
-                              color: MyColors.red,
-                            ),
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: MyColors.red),
                           ),
-
-                          Text(
-                            "Serial No.: ${item['serial']}",
-                            style: TextStyle(fontSize: 18), // Adjust text size
-                          ),
-                          Text(
-                            "Available Stock: ${item['stock']}",
-                            style: TextStyle(fontSize: 18), // Adjust text size
-                          ),
-                          Text(
-                            "Unit: ${item['unit']}",
-                            style: TextStyle(fontSize: 18), // Adjust text size
-                          ),
-                          Text(
-                            "Category: ${item['category']}",
-                            style: TextStyle(fontSize: 18), // Adjust text size
-                          ),
+                          Text("Serial No.: ${item['serial']}", style: TextStyle(fontSize: 18)),
+                          Text("Available Stock: ${item['stock']}", style: TextStyle(fontSize: 18)),
+                          Text("Unit: ${item['unit']}", style: TextStyle(fontSize: 18)),
+                          Text("Category: ${item['category']}", style: TextStyle(fontSize: 18)),
                         ],
                       ),
                     ),
@@ -148,7 +162,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ],
         ),
-
       ),
     );
   }

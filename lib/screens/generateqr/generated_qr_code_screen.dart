@@ -20,12 +20,12 @@ class GeneratedQRCodeScreen extends StatefulWidget {
 }
 
 class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
-  late ScreenshotController screenshotController; // ✅ Declare `late`
+  late ScreenshotController screenshotController;
 
   @override
   void initState() {
     super.initState();
-    screenshotController = ScreenshotController(); // ✅ Initialize in initState()
+    screenshotController = ScreenshotController();
   }
 
   // Function to Let User Choose Save Location
@@ -34,12 +34,9 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
       screenshotController.capture().then((Uint8List? image) async {
         if (image != null) {
           try {
-            // Let user select the folder
             String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
             if (selectedDirectory == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("No folder selected.")),
-              );
+              _showSnackBar("No folder selected.");
               return;
             }
 
@@ -52,47 +49,48 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
             await refreshGallery(filePath);
 
             // Show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("QR Code saved to: $filePath")),
-            );
+            _showSnackBar("QR Code saved to: $filePath");
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Failed to save QR Code: $e")),
-            );
+            _showSnackBar("Failed to save QR Code: $e");
           }
         }
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Storage permission denied.")),
-      );
+      _showSnackBar("Storage permission denied.");
     }
   }
 
-  /// **✅ Request Storage Permission**
+  /// ✅ Request Storage Permission (Handles Android 13+)
   Future<bool> _requestStoragePermission() async {
     if (Platform.isAndroid) {
-      if (await Permission.storage.request().isGranted) {
-        return true;
+      var status = await Permission.manageExternalStorage.status;
+      if (!status.isGranted) {
+        status = await Permission.manageExternalStorage.request();
       }
-      if (await Permission.manageExternalStorage.request().isGranted) {
-        return true;
-      }
+      return status.isGranted;
     }
-    return false;
+    return true;
   }
 
-  /// **✅ Refresh Gallery to Show Saved Image**
+  /// ✅ Refresh Gallery to Show Saved Image
   Future<void> refreshGallery(String filePath) async {
     try {
-      await Process.run('am', ['broadcast', '-a', 'android.intent.action.MEDIA_SCANNER_SCAN_FILE', '-d', 'file://$filePath']);
+      if (Platform.isAndroid) {
+        await Process.run('am', ['broadcast', '-a', 'android.intent.action.MEDIA_SCANNER_SCAN_FILE', '-d', 'file://$filePath']);
+      }
     } catch (e) {
       debugPrint("Gallery refresh failed: $e");
     }
   }
 
+  /// ✅ Show Snack Bar
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
+    String? qrCodeUrl = widget.itemDetails["QR Code"];
     String qrData = widget.itemDetails.entries.map((e) => "${e.key}: ${e.value}").join("\n");
 
     return Scaffold(
@@ -100,14 +98,12 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
         backgroundColor: MyColors.red,
         centerTitle: true,
         title: Text(
-          "GENERATE QR CODE",
+          "Generated QR Code",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Get.back();
-          },
+          onPressed: () => Get.back(),
         ),
       ),
       body: Padding(
@@ -118,14 +114,28 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
             children: [
               // QR Code Display
               Screenshot(
-                controller: screenshotController, // ✅ No more LateInitializationError
+                controller: screenshotController,
                 child: Container(
                   padding: EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     border: Border.all(color: MyColors.red, width: 2),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: QrImageView(
+                  child: qrCodeUrl != null && qrCodeUrl.isNotEmpty
+                      ? Image.network(
+                    qrCodeUrl,
+                    width: 200,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(child: CircularProgressIndicator());
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(Icons.error, color: Colors.red, size: 50);
+                    },
+                  )
+                      : QrImageView(
                     data: qrData,
                     size: 200,
                     backgroundColor: Colors.white,
@@ -134,7 +144,7 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
               ),
               SizedBox(height: 10),
 
-              // Tap to Save QR Code
+              // Save QR Code Button
               TextButton(
                 onPressed: () => _saveQRCodeToGallery(context),
                 child: Text(
@@ -169,9 +179,7 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Get.back();
-                  },
+                  onPressed: () => Get.back(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: MyColors.orange,
                     padding: EdgeInsets.symmetric(vertical: 15),
@@ -183,15 +191,13 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
                 ),
               ),
 
-              SizedBox(height: 80 ),
+              SizedBox(height: 80),
             ],
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Get.back();
-        },
+        onPressed: () => Get.back(),
         backgroundColor: MyColors.red,
         child: Icon(Icons.arrow_back, color: Colors.white, size: 30),
       ),
