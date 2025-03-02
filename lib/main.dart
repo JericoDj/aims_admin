@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // ✅ Import Firebase options
+import 'package:permission_handler/permission_handler.dart';
 import 'package:aims_admin/screens/authentication/loginscreen.dart';
 
 Future<void> main() async {
@@ -13,6 +14,9 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform, // ✅ Ensure Firebase is initialized correctly
     );
+
+    // ✅ Request necessary permissions
+    await _requestPermissions();
 
     // ✅ Use `Get.put` to ensure AuthRepository is ready immediately
     Get.put(AuthenticationRepository());
@@ -27,6 +31,19 @@ Future<void> main() async {
     }
   } catch (e) {
     debugPrint("Firebase initialization failed: $e");
+  }
+}
+
+// ✅ Request Permissions for Android & iOS
+Future<void> _requestPermissions() async {
+  if (!kIsWeb) {
+    await [
+      Permission.camera, // Camera access for QR scanning
+      Permission.microphone, // Microphone (if needed for voice input)
+      Permission.storage, // Read/write storage access
+      Permission.manageExternalStorage, // For Android 11+ file saving
+      Permission.photos, // iOS photo library access
+    ].request();
   }
 }
 

@@ -4,13 +4,19 @@
 <dict>
 
     <key>NSCameraUsageDescription</key>
-    <string>We need camera access to scan QR codes.</string>
-
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>We need access to pick files from your device.</string>
+    <string>We need access to your camera for QR scanning.</string>
 
     <key>NSMicrophoneUsageDescription</key>
-    <string>We need microphone access for video recording (if needed).</string>
+    <string>We need access to your microphone for voice input.</string>
+
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need access to your photo library to save and load images.</string>
+
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>We need permission to save images to your gallery.</string>
+
+    <key>NSFileProtectionCompleteUntilFirstUserAuthentication</key>
+    <string></string>
 
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
