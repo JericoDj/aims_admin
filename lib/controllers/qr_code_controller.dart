@@ -19,11 +19,11 @@ class QRCodeController extends GetxController {
   final TextEditingController specificationController = TextEditingController();
 
   // Category Dropdown List
-  final RxString selectedCategory = "Medical: Equipments".obs;
+  final RxString selectedCategory = "Medical Equipments".obs;
   final List<String> categories = [
-    "Medical: Equipments",
-    "Medical: Supplies",
-    "Medical: Drugs",
+    "Medical Equipments",
+    "Medical Supplies",
+    "Medical Drugs",
     "Dental",
     "Miscellaneous"
   ];

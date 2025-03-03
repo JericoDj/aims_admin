@@ -16,37 +16,92 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   void initState() {
     super.initState();
-    fetchInventory(); // Fetch Firestore data
+    checkFirestoreData(); // Ensure data exists before fetching
+    fetchRootCollections();
+
   }
 
-  /// **Fetch Inventory Items from Firestore**
+  Future<void> fetchRootCollections() async {
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection("metadata") // Fetch collections from a known document
+          .doc("root_collections")
+          .get();
+
+      if (doc.exists) {
+        List<dynamic> collections = doc["collections"];
+        print("📌 Root Collections Found: ${collections.length}");
+        for (var collectionName in collections) {
+          print("📌 Collection: $collectionName");
+        }
+      } else {
+        print("❌ No root collections metadata found.");
+      }
+    } catch (e) {
+      print("❌ Error fetching root collections: $e");
+    }
+  }
+
+
+
+
+
+  /// ✅ Step 1: Check if Firestore contains data
+  Future<void> checkFirestoreData() async {
+    try {
+      QuerySnapshot categoriesSnapshot =
+      await FirebaseFirestore.instance.collection("categories").get();
+
+      if (categoriesSnapshot.docs.isEmpty) {
+        print("❌ No categories found in Firestore.");
+        return;
+      }
+
+      print("📌 Found Categories: ${categoriesSnapshot.docs.length}");
+      fetchInventory(); // If categories exist, fetch items
+    } catch (e) {
+      print("❌ Firestore Check Error: $e");
+    }
+  }
+
+  /// ✅ Step 2: Fetch Inventory Items from Firestore
   Future<void> fetchInventory() async {
     try {
-      QuerySnapshot querySnapshot =
-      await FirebaseFirestore.instance.collection("items").get();
+      List<Map<String, dynamic>> fetchedItems = [];
 
-      List<Map<String, dynamic>> fetchedItems = querySnapshot.docs.map((doc) {
-        return {
-          "id": doc.id, // Store document ID for reference
-          "serial": doc["serial_no"] ?? "N/A",
-          "name": doc["item_name"] ?? "Unknown Item",
-          "stock": doc["stock"] ?? "0",
-          "unit": doc["unit_measurement"] ?? "Unit",
-          "category": doc["category"] ?? "Uncategorized",
-        };
-      }).toList();
+      QuerySnapshot categoriesSnapshot =
+      await FirebaseFirestore.instance.collection("categories").get();
+
+      for (var categoryDoc in categoriesSnapshot.docs) {
+        String categoryName = categoryDoc.id;
+        QuerySnapshot itemsSnapshot =
+        await categoryDoc.reference.collection("items").get();
+
+        for (var itemDoc in itemsSnapshot.docs) {
+          fetchedItems.add({
+            "id": itemDoc.id,
+            "serial": itemDoc["serial_no"] ?? "N/A",
+            "name": itemDoc["item_name"] ?? "Unknown Item",
+            "stock": itemDoc["stock"] ?? "0",
+            "unit": itemDoc["unit_measurement"] ?? "Unit",
+            "category": categoryName,
+          });
+        }
+      }
 
       setState(() {
         allItems = fetchedItems;
         filteredItems = fetchedItems;
       });
+
+      print("✅ Inventory Fetched Successfully! Total Items: ${allItems.length}");
     } catch (e) {
       print("❌ Error fetching inventory: $e");
       Get.snackbar("Error", "Failed to load inventory.");
     }
   }
 
-  /// **Search Filter**
+  /// ✅ Step 3: Search Filter
   void filterSearch(String query) {
     setState(() {
       if (query.isEmpty) {

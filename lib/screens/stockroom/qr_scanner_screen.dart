@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -58,18 +59,25 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 onDetect: (capture) {
                   if (capture.barcodes.isNotEmpty) {
                     String scannedData = capture.barcodes.first.rawValue ?? "";
-                    print("📌 Scanned Data: $scannedData");
+                    print("📌 Raw Scanned Data: $scannedData");  // Debug scanned string
 
                     setState(() {
                       scannedItem = _parseScannedData(scannedData);
-                      quantityController.text = scannedItem['quantity'] ?? "";
-                      expirationController.text = scannedItem['expiration_date'] ?? "";
                     });
+
+                    // Debugging output
+                    print("📌 Scanned Data Map: $scannedItem");
+                    print("📌 Category: ${scannedItem['category']}");
+
+                    // Populate text fields if data is available
+                    quantityController.text = scannedItem['quantity'] ?? "";
+                    expirationController.text = scannedItem['expiration_date'] ?? "";
 
                     // Show dialog to edit details
                     showEditDialog(context);
                   }
                 },
+
               ),
             ),
             SizedBox(height: 20),
@@ -114,9 +122,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     Map<String, String> parsedData = {};
     List<String> lines = data.split("\n");
     for (String line in lines) {
-      List<String> parts = line.split(": ");
-      if (parts.length == 2) {
-        parsedData[parts[0].trim()] = parts[1].trim();
+      List<String> parts = line.split(":");
+      if (parts.length >= 2) {
+        parsedData[parts[0].trim()] = parts.sublist(1).join(":").trim();
       }
     }
     return parsedData;
@@ -201,16 +209,49 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  /// ✅ Function to Save Updated Data
-  void _saveUpdatedData() {
-    setState(() {
-      scannedItem['quantity'] = quantityController.text;
-      scannedItem['expiration_date'] = expirationController.text;
-    });
+  void _saveUpdatedData() async {
+    if (scannedItem.isEmpty) return;
 
-    print("✅ Updated Quantity: ${scannedItem['quantity']}");
-    print("✅ Updated Expiration Date: ${scannedItem['expiration_date']}");
+    String itemName = scannedItem['item_name'] ?? "";
+    String category = scannedItem['category'] ?? "";
+
+    // Ensure category and item name use underscores instead of spaces
+    category = category.replaceAll(" ", "_").replaceAll(":", "_");
+    itemName = itemName.replaceAll(" ", "_").replaceAll(":", "_");
+
+    if (itemName.isEmpty || category.isEmpty) {
+      print("❌ Error: Missing item name or category. Cannot update Firestore.");
+      return;
+    }
+
+    // Print document path for debugging
+    print("📌 Firestore Path: categories/$category/items/$itemName");
+
+    try {
+      DocumentReference itemRef = FirebaseFirestore.instance
+          .collection('categories')
+          .doc(category)
+          .collection('items')
+          .doc(itemName);  // Now the item name is correctly formatted!
+
+      await itemRef.set({
+        'quantity': quantityController.text,
+        'expiration_date': expirationController.text,
+      }, SetOptions(merge: true)); // Prevents overwriting existing data
+
+      setState(() {
+        scannedItem['quantity'] = quantityController.text;
+        scannedItem['expiration_date'] = expirationController.text;
+      });
+
+      print("✅ Firestore Updated Successfully in $category -> $itemName!");
+    } catch (e) {
+      print("❌ Firestore Update Error: $e");
+    }
   }
+
+
+
 
   /// ✅ Function to Pick and Decode QR Code from an Image
   Future<void> _pickAndDecodeQRFile() async {
