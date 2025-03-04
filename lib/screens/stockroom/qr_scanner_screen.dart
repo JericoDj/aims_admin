@@ -225,11 +225,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
 
     // Print document path for debugging
-    print("📌 Firestore Path: categories/$category/items/$itemName");
+    print("📌 Firestore Path: stock/$category/items/$itemName");
 
     try {
       DocumentReference itemRef = FirebaseFirestore.instance
-          .collection('categories')
+          .collection('stock')
           .doc(category)
           .collection('items')
           .doc(itemName);  // Now the item name is correctly formatted!

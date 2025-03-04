@@ -85,7 +85,7 @@ class QRCodeController extends GetxController {
         // **Store QR Code URL in Firestore under the specific category**
         itemDetails["qr_code_url"] = qrCodeUrl;
 
-        String categoryCollection = "categories/$categoryFolder/items";
+        String categoryCollection = "stock/$categoryFolder/items";
 
         // Use item name as document ID in Firestore
         DocumentReference itemRef = FirebaseFirestore.instance.collection(categoryCollection).doc(formattedItemName);

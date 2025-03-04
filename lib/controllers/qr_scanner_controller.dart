@@ -16,7 +16,7 @@ class QRScannerController extends GetxController {
       print("🔍 Fetching from Firestore: Category - $category | Item - $itemName");
 
       DocumentSnapshot itemDoc = await FirebaseFirestore.instance
-          .collection("categories/$category/items")
+          .collection("stock/category/$category/items")
           .doc(itemName)
           .get();
 
@@ -106,7 +106,7 @@ class QRScannerController extends GetxController {
   /// **Update Firestore with new quantity and expiration date**
   void updateItemInFirestore(String category, String itemName, String quantity, String expiration) async {
     try {
-      await FirebaseFirestore.instance.collection("categories/$category/items").doc(itemName).update({
+      await FirebaseFirestore.instance.collection("stock/$category/items").doc(itemName).update({
         "available_stock": int.parse(quantity),
         "expiration_date": expiration,
       });
