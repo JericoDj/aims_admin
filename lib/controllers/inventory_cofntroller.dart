@@ -1,3 +1,4 @@
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -53,6 +54,7 @@ class InventoryController extends GetxController {
             "id": itemDoc.id,
             "name": itemDoc["item_name"] ?? "Unknown Item",
             "brand": itemDoc["brand"] ?? "Unknown",
+            "quantity": itemDoc["quantity"] ?? 0,
             "category": category, // Use category from list
             "expiration_date": itemDoc["expiration_date"] ?? "N/A",
             "qr_code_url": itemDoc["qr_code_url"] ?? "",
@@ -81,6 +83,62 @@ class InventoryController extends GetxController {
             item["brand"].toString().toLowerCase().contains(query.toLowerCase()) ||
             item["category"].toString().toLowerCase().contains(query.toLowerCase());
       }).toList());
+    }
+  }
+
+  /// Function to confirm and delete item from Firestore and Firebase Storage
+
+  /// Function to confirm deletion before proceeding
+  Future<void> confirmDeleteItem(BuildContext context, String category, String itemId, String itemName) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text("Confirm Deletion", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          content: Text("Are you sure you want to delete this item? This action cannot be undone."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext), // Close the confirmation dialog
+              child: Text("Cancel", style: TextStyle(color: Colors.black)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext); // Close confirmation dialog before deleting
+                Navigator.pop(dialogContext); // Close confirmation dialog before deleting
+                await deleteItem(category, itemId, itemName);
+              },
+              child: Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Function to delete item from Firestore and its QR code from Firebase Storage
+  Future<void> deleteItem(String category, String itemId, String itemName) async {
+    try {
+      // Convert category spaces to underscores
+      String formattedCategory = category.replaceAll(" ", "_");
+      String qrCodePath = "qr_codes/$formattedCategory/qr_$itemName.png";
+
+      // Delete Firestore document
+      await FirebaseFirestore.instance.collection("stock").doc(category).collection("items").doc(itemId).delete();
+
+      // Delete from Firebase Storage
+      try {
+        await FirebaseStorage.instance.ref(qrCodePath).delete();
+        print("✅ QR Code deleted from Storage: $qrCodePath");
+      } catch (e) {
+        print("⚠️ QR Code not found in Storage: $qrCodePath");
+      }
+
+      // Show success notification
+      Get.snackbar("Success", "Item and QR Code deleted successfully", backgroundColor: Colors.green, colorText: Colors.white);
+
+      refreshInventory(); // Refresh inventory list after deletion
+    } catch (e) {
+      Get.snackbar("Error", "Failed to delete item: $e", backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
 

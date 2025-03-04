@@ -5,12 +5,15 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storage
 import '../../utils/colors.dart';
 
 class InventoryScreen extends StatelessWidget {
   final InventoryController _controller = Get.put(InventoryController());
   final ScreenshotController screenshotController = ScreenshotController();
   bool _isPickingFile = false;
+
+
 
   Future<void> _saveQRCodeToGallery(BuildContext context, String imageUrl, String itemName) async {
     if (_isPickingFile) return;
@@ -21,8 +24,8 @@ class InventoryScreen extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.white, // Ensures the background is white
-            border: Border.all(color: Colors.black, width: 2), // Adds border
+            color: Colors.white,
+            border: Border.all(color: Colors.black, width: 2),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -67,7 +70,6 @@ class InventoryScreen extends StatelessWidget {
     }
     _isPickingFile = false;
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +156,8 @@ class InventoryScreen extends StatelessWidget {
                                   children: [
                                     Text("Name: ${item['name']}", style: TextStyle(fontSize: 18)),
                                     Text("Category: ${item['category']}", style: TextStyle(fontSize: 18)),
-                                    Text("Available Stock: ${item['available_stock']}", style: TextStyle(fontSize: 18)),
+                                    Text("Available Stock: ${item['quantity'] ?? 'N/A'}", style: TextStyle(fontSize: 18)),
+
                                     Text("Expiration Date: ${item['expiration_date']}", style: TextStyle(fontSize: 18)),
                                     SizedBox(height: 10),
                                     Center(
@@ -169,15 +172,25 @@ class InventoryScreen extends StatelessWidget {
                                   ],
                                 ),
                                 actions: [
-                                  TextButton(
-                                    onPressed: () => _saveQRCodeToGallery(context, item['qr_code_url'], item['name']),
-                                    child: Text("Save QR Code", style: TextStyle(color: MyColors.red)),
+                                  Column(
+                                    children: [
+                                      TextButton(
+                                        onPressed: () => _saveQRCodeToGallery(context, item['qr_code_url'], item['name']),
+                                        child: Text("Save QR Code", style: TextStyle(color: MyColors.red)),
+                                      ),
+
+                                      TextButton(
+                                        onPressed: () => _controller.confirmDeleteItem(context, item['category'], item['id'], item['name']),
+                                        child: Text("Delete", style: TextStyle(color: Colors.red)),
+                                      ),
+
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text("Close", style: TextStyle(color: MyColors.red)),
+                                      ),
+                                    ],
                                   ),
 
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text("Close", style: TextStyle(color: MyColors.red)),
-                                  ),
                                 ],
                               );
                             },
@@ -189,29 +202,10 @@ class InventoryScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                             side: BorderSide(color: MyColors.red, width: 1),
                           ),
-                          child: Padding(
-                            padding: EdgeInsets.all(10),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "${item['name']}",
-                                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: MyColors.red),
-                                    ),
-                                    Text("Category: ${item['category']}", style: TextStyle(fontSize: 18)),
-                                    Text("Available Stock: ${item['available_stock']}", style: TextStyle(fontSize: 18)),
-                                    Text("Expiration Date: ${item['expiration_date']}", style: TextStyle(fontSize: 18)),
-                                  ],
-                                ),
-                                Container(
-                                  height: 50,
-                                  child: Image.network("${item['qr_code_url']}"),
-                                )
-                              ],
-                            ),
+                          child: ListTile(
+                            title: Text("${item['name']}", style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red)),
+                            subtitle: Text("Category: ${item['category']}"),
+                            trailing: Image.network("${item['qr_code_url']}", height: 50),
                           ),
                         ),
                       );

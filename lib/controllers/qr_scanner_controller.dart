@@ -53,7 +53,7 @@ class QRScannerController extends GetxController {
               children: [
                 itemDetail("Storage Code", itemData["storage_code"] ?? "N/A"),
                 itemDetail("Serial No.", itemData["serial_no"] ?? "N/A"),
-                itemDetail("Available Stock", itemData["available_stock"]?.toString() ?? "0"),
+                itemDetail("Available Stock", itemData["quantity"]?.toString() ?? "0"),
                 itemDetail("Item Name", itemData["item_name"] ?? "N/A"),
                 itemDetail("Brand", itemData["brand"] ?? "N/A"),
                 itemDetail("Unit of Measurement", itemData["unit_measurement"] ?? "N/A"),
