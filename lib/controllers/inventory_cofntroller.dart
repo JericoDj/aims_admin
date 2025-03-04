@@ -12,36 +12,52 @@ class InventoryController extends GetxController {
   // Text editing controller for search
   var searchController = TextEditingController();
 
+  // List of categories to fetch
+  final List<String> categories = [
+    "Medical_Equipments",
+    "Medical_Supplies",
+    "Medical_Drugs",
+    "Dental",
+    "Miscellaneous"
+  ];
+
   @override
   void onInit() {
     super.onInit();
-    fetchInventory("Miscellaneous");
-    // Fetch data when the controller is initialized
+    fetchInventory(); // Fetch data when the controller initializes
   }
 
-  /// Fetch inventory data from Firestore
-  Future<void> fetchInventory(String category) async {
+  /// Fetch inventory data from Firestore (Only from predefined categories)
+  Future<void> fetchInventory() async {
     try {
       List<Map<String, dynamic>> fetchedItems = [];
 
-      // Fetch all items inside the selected category's "items" subcollection
-      QuerySnapshot itemsSnapshot = await _firestore
-          .collection("stock")
-          .doc(category) // Specific category document
-          .collection("items") // Access the "items" subcollection
-          .get();
+      print("Fetching inventory from selected categories...");
 
-      print("Total items found: ${itemsSnapshot.size}"); // Debugging count
+      for (String category in categories) {
+        print("Fetching items for category: $category");
 
-      for (var itemDoc in itemsSnapshot.docs) {
-        fetchedItems.add({
-          "id": itemDoc.id,
-          "name": itemDoc["item_name"] ?? "Unknown Item",
-          "brand": itemDoc["brand"] ?? "Unknown",
-          "category": itemDoc["category"] ?? "No Category",
-          "expiration_date": itemDoc["expiration_date"] ?? "N/A",
-          "qr_code_url": itemDoc["qr_code_url"] ?? "",
-        });
+        // Fetch items inside the selected category's "items" subcollection
+        QuerySnapshot itemsSnapshot = await _firestore
+            .collection("stock")
+            .doc(category) // Specific category document
+            .collection("items") // Access the "items" subcollection
+            .get();
+
+        print("Items found in $category: ${itemsSnapshot.size}");
+
+        for (var itemDoc in itemsSnapshot.docs) {
+          print("Item Data: ${itemDoc.data()}"); // Debugging log
+
+          fetchedItems.add({
+            "id": itemDoc.id,
+            "name": itemDoc["item_name"] ?? "Unknown Item",
+            "brand": itemDoc["brand"] ?? "Unknown",
+            "category": category, // Use category from list
+            "expiration_date": itemDoc["expiration_date"] ?? "N/A",
+            "qr_code_url": itemDoc["qr_code_url"] ?? "",
+          });
+        }
       }
 
       // Update the observable lists
@@ -55,7 +71,6 @@ class InventoryController extends GetxController {
     }
   }
 
-
   /// Filter items based on search query
   void filterSearch(String query) {
     if (query.isEmpty) {
@@ -63,7 +78,7 @@ class InventoryController extends GetxController {
     } else {
       filteredItems.assignAll(allItems.where((item) {
         return item["name"].toString().toLowerCase().contains(query.toLowerCase()) ||
-            item["serial"].toString().toLowerCase().contains(query.toLowerCase()) ||
+            item["brand"].toString().toLowerCase().contains(query.toLowerCase()) ||
             item["category"].toString().toLowerCase().contains(query.toLowerCase());
       }).toList());
     }
@@ -71,7 +86,6 @@ class InventoryController extends GetxController {
 
   /// Refresh inventory data
   void refreshInventory() {
-    fetchInventory("Miscellaneous");
-
+    fetchInventory(); // Refresh all categories
   }
 }

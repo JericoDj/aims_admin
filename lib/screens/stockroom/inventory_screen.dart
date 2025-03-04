@@ -12,12 +12,40 @@ class InventoryScreen extends StatelessWidget {
   final ScreenshotController screenshotController = ScreenshotController();
   bool _isPickingFile = false;
 
-  Future<void> _saveQRCodeToGallery(BuildContext context, String imageUrl) async {
+  Future<void> _saveQRCodeToGallery(BuildContext context, String imageUrl, String itemName) async {
     if (_isPickingFile) return;
     _isPickingFile = true;
 
     try {
-      Uint8List? image = await screenshotController.capture(pixelRatio: 4.0);
+      Uint8List? image = await screenshotController.captureFromWidget(
+        Container(
+          padding: EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white, // Ensures the background is white
+            border: Border.all(color: Colors.black, width: 2), // Adds border
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.network(
+                imageUrl,
+                height: 150,
+                width: 150,
+                fit: BoxFit.contain,
+              ),
+              SizedBox(height: 10),
+              Text(
+                itemName,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        pixelRatio: 4.0,
+      );
+
       if (image == null) {
         Get.snackbar("Error", "QR Code capture failed.", backgroundColor: Colors.red, colorText: Colors.white);
         return;
@@ -39,6 +67,7 @@ class InventoryScreen extends StatelessWidget {
     }
     _isPickingFile = false;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -141,9 +170,10 @@ class InventoryScreen extends StatelessWidget {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => _saveQRCodeToGallery(context, item['qr_code_url']),
+                                    onPressed: () => _saveQRCodeToGallery(context, item['qr_code_url'], item['name']),
                                     child: Text("Save QR Code", style: TextStyle(color: MyColors.red)),
                                   ),
+
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
                                     child: Text("Close", style: TextStyle(color: MyColors.red)),
