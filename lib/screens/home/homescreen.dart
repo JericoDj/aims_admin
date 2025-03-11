@@ -1,7 +1,11 @@
 import 'package:aims_admin/screens/manage_account/manage_accounts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../api/firebase_api.dart';
 import '../../utils/colors.dart';
+import '../../utils/local_storage.dart';
 import '../../utils/version.dart';
 import '../authentication/loginscreen.dart';
 import '../generateqr/genearateqrscreen.dart';
@@ -17,8 +21,47 @@ class _HomeScreenState extends State<HomeScreen> {
   bool hasNotification = true;
   bool isNotificationDrawerOpen = false;
 
+
+  @override
+  void initState() {
+    super.initState();
+    _initFirebaseNotifications();
+  }
+
+
+
+  /// **Initializes Firebase Notifications only for logged-in users**
+  Future<void> _initFirebaseNotifications() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      print("User logged in: ${user.uid}");
+
+      // Initialize Firebase Messaging
+      await FirebaseAPI().initNotifications(user.uid);
+
+      // Handle background FCM notifications
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        _handleNotificationClick(message);
+      });
+    } else {
+      print("No user found. Skipping notifications.");
+    }
+  }
+
+  /// **Handles notification click and navigates to the correct screen**
+  void _handleNotificationClick(RemoteMessage message) {
+    if (message.data.containsKey('receiverFullName') && message.data.containsKey('receiverEmail')) {
+
+
+      // Navigate to the chat screen
+      Get.to(() => HomeScreen(
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+
     return SafeArea(
       child: Scaffold(
         backgroundColor: MyColors.white,
@@ -208,7 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
   void _showLogoutDialog() {
     showDialog(
       context: context,
@@ -222,8 +264,15 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text("Cancel", style: TextStyle(color: MyColors.red)),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
+              // Remove FCM token and UID from local storage
+              await LocalStorage.deleteFCMToken();
+              await LocalStorage.deleteUserId();
+
+              // Pop the logout dialog
               Navigator.pop(context);
+
+              // Navigate to LoginScreen
               Get.offAll(() => LoginScreen());
             },
             child: Text("Logout",
@@ -233,6 +282,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+
 
   Widget buildButton(String text, Color textColor, Color borderColor, VoidCallback onPressed) {
     return Padding(

@@ -5,6 +5,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../screens/generateqr/generated_qr_code_screen.dart';
+import '../utils/notification_service.dart';
+
 
 class QRCodeController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -29,8 +31,7 @@ class QRCodeController extends GetxController {
     "Miscellaneous"
   ];
 
-  /// **Generate QR Code, Upload to Firebase Storage, and Save to Firestore**
-  /// **Generate QR Code, Upload to Firebase Storage, and Save to Firestore**
+  /// **Generate QR Code, Upload to Firebase Storage, Save to Firestore, and Send Notification**
   Future<void> generateQRCode({String? itemId}) async {
     if (formKey.currentState!.validate()) {
       Get.dialog(
@@ -115,8 +116,15 @@ class QRCodeController extends GetxController {
           "Action": "Generate QR Code",
         });
 
-
         print("📜 ✅ History Log Added: $rawItemName - $dateGenerated");
+
+        // **Send Notification to All Users**
+        await NotificationService.sendNotificationToAllUsers(
+            "New Item Added: $rawItemName",
+            "A new item has been added to the inventory: $rawItemName. Check it out!"
+        );
+
+        print("📲 ✅ Notification sent to all users!");
 
         Get.back();
         Get.to(() => GeneratedQRCodeScreen(itemDetails: {...itemDetails, "QR Code": qrCodeUrl}));
@@ -128,7 +136,6 @@ class QRCodeController extends GetxController {
       }
     }
   }
-
 
   @override
   void onClose() {
@@ -144,8 +151,6 @@ class QRCodeController extends GetxController {
   }
 }
 
-
-/// **Sanitize String for Safe Use in Firebase Paths (File Names & Document IDs)**
 String _sanitizeString(String input) {
   return input
       .trim()
@@ -153,7 +158,6 @@ String _sanitizeString(String input) {
       .replaceAll(RegExp(r'_+'), "_"); // Remove consecutive "__"
 }
 
-/// **Sanitize Category to Prevent Double Underscores**
 String _sanitizeCategory(String category) {
   return category
       .replaceAll(":", "") // Remove colons
@@ -162,7 +166,6 @@ String _sanitizeCategory(String category) {
       .trim();
 }
 
-/// **Generate QR Code as an Image (Uint8List)**
 Future<Uint8List> _generateQRImage(Map<String, dynamic> itemDetails) async {
   try {
     String qrData = itemDetails.entries.map((e) => "${e.key}: ${e.value}").join("\n");

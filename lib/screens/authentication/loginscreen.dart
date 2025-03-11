@@ -1,11 +1,14 @@
 import 'package:aims_admin/screens/authentication/create_account.dart';
 import 'package:aims_admin/repository/authentication_repository.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../utils/colors.dart';
 import '../../../utils/version.dart';
+import '../../utils/local_storage.dart';
 import '../home/homescreen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -39,33 +42,32 @@ class _LoginScreenState extends State<LoginScreen> {
       bool isAdmin = await _checkIfUserIsAdmin(user);
 
       if (!isAdmin) {
-        // If the user is not an admin, attempt to set them as admin
         try {
           await _authRepo.setUserAsAdmin(user.uid);
-
-          // Re-check if admin was successfully set
           isAdmin = await _checkIfUserIsAdmin(user);
 
           if (!isAdmin) {
             Get.snackbar("Access Denied", "Admin setup failed. Please contact support.",
                 backgroundColor: Colors.red, colorText: Colors.white);
-            await FirebaseAuth.instance.signOut(); // Log out user since admin setup failed
+            await FirebaseAuth.instance.signOut();
             return;
           }
         } catch (e) {
           Get.snackbar("Error", "Failed to set admin: ${e.toString()}",
               backgroundColor: Colors.red, colorText: Colors.white);
-          await FirebaseAuth.instance.signOut(); // Log out user
+          await FirebaseAuth.instance.signOut();
           return;
         }
       }
 
-      // If the user is now an admin, allow login
+
+      // Navigate to HomeScreen
       Get.to(() => HomeScreen());
       Get.snackbar("Login Successful", "Welcome back!",
           backgroundColor: Colors.green, colorText: Colors.white);
     }
   }
+
 
   Future<bool> _checkIfUserIsAdmin(User user) async {
     final idTokenResult = await user.getIdTokenResult(true);
