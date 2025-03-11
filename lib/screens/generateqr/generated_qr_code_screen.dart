@@ -21,6 +21,7 @@ class GeneratedQRCodeScreen extends StatefulWidget {
 
 class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
   late ScreenshotController screenshotController;
+  bool _isPickingFile = false;
 
   @override
   void initState() {
@@ -28,9 +29,7 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
     screenshotController = ScreenshotController();
   }
 
-  bool _isPickingFile = false;
-
-  /// ✅ Function to Capture and Save QR Code
+  /// ✅ Function to Capture and Save QR Code with Item Name
   Future<void> _saveQRCodeToGallery(BuildContext context) async {
     if (_isPickingFile) return;
     _isPickingFile = true;
@@ -38,7 +37,7 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
     if (await _requestStoragePermission()) {
       try {
         Uint8List? image = await screenshotController.capture(
-          pixelRatio: 4.0, // ✅ Increase DPI for a sharp image
+          pixelRatio: 4.0, // ✅ High DPI for clear image
         );
 
         if (image == null) {
@@ -52,9 +51,9 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
           return;
         }
 
-        // ✅ Save QR Code Image
-        final String filePath =
-            "$selectedDirectory/qr_code_${DateTime.now().millisecondsSinceEpoch}.png";
+        // ✅ Use item name in the file name
+        String itemName = widget.itemDetails['item_name'] ?? "QR_Code";
+        final String filePath = "$selectedDirectory/qr_${itemName.replaceAll(' ', '_')}.png";
         File file = File(filePath);
         await file.writeAsBytes(image);
 
@@ -110,6 +109,7 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
     String qrData = widget.itemDetails.entries
         .map((e) => "${e.key}: ${e.value}")
         .join("\n");
+    String itemName = widget.itemDetails['item_name'] ?? "Unknown Item";
 
     return Scaffold(
       appBar: AppBar(
@@ -130,7 +130,7 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ✅ High-Quality QR Code with White Background
+              // ✅ Screenshot Wrapper (QR Code + Item Name)
               Screenshot(
                 controller: screenshotController,
                 child: Container(
@@ -140,13 +140,27 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
                     border: Border.all(color: MyColors.red, width: 2),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: QrImageView(
-                    data: qrData,
-                    version: QrVersions.auto,
-                    size: 400, // ✅ Higher resolution
-                    gapless: false,
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black, // ✅ Ensure black QR code
+                  child: Column(
+                    children: [
+                      QrImageView(
+                        data: qrData,
+                        version: QrVersions.auto,
+                        size: 200, // ✅ Higher resolution
+                        gapless: false,
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black, // ✅ Ensure black QR code
+                      ),
+
+                      Text(
+                        itemName, // ✅ Item Name Below QR Code
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: MyColors.red,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -160,7 +174,8 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                 ),
                 child: Text(
-                  "📥 Save QR Code",
+
+                  "Save QR Code",
                   style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
@@ -190,29 +205,14 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
               SizedBox(height: 20),
 
               // ✅ Edit Details Button
-              ElevatedButton(
-                onPressed: () => Get.back(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: MyColors.orange,
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                ),
-                child: Text(
-                  "✏️ Edit Details",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
+
 
               SizedBox(height: 80),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Get.back(),
-        backgroundColor: MyColors.red,
-        child: Icon(Icons.arrow_back, color: Colors.white, size: 30),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
     );
   }
 }

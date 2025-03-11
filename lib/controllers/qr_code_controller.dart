@@ -17,6 +17,7 @@ class QRCodeController extends GetxController {
   final TextEditingController expirationDateController = TextEditingController();
   final TextEditingController unitMeasurementController = TextEditingController();
   final TextEditingController specificationController = TextEditingController();
+  final TextEditingController quantityController = TextEditingController(); // ✅ Added Quantity Controller
 
   // Category Dropdown List
   final RxString selectedCategory = "Medical Equipments".obs;
@@ -28,6 +29,7 @@ class QRCodeController extends GetxController {
     "Miscellaneous"
   ];
 
+  /// **Generate QR Code, Upload to Firebase Storage, and Save to Firestore**
   /// **Generate QR Code, Upload to Firebase Storage, and Save to Firestore**
   Future<void> generateQRCode({String? itemId}) async {
     if (formKey.currentState!.validate()) {
@@ -43,6 +45,9 @@ class QRCodeController extends GetxController {
       // Format category for Firestore & Storage
       String categoryFolder = _sanitizeCategory(selectedCategory.value); // Prevent double underscores
 
+      // Get current date and time
+      String dateGenerated = DateTime.now().toIso8601String();
+
       // Collect item details
       Map<String, dynamic> itemDetails = {
         "storage_code": storageCodeController.text,
@@ -52,6 +57,7 @@ class QRCodeController extends GetxController {
         "expiration_date": expirationDateController.text,
         "unit_measurement": unitMeasurementController.text,
         "specifications": specificationController.text,
+        "quantity": quantityController.text.trim(), // ✅ Store quantity as STRING
         "category": selectedCategory.value
       };
 
@@ -100,6 +106,18 @@ class QRCodeController extends GetxController {
           print("✅ Item successfully updated!");
         }
 
+        // **✅ Save to History Collection**
+        await FirebaseFirestore.instance.collection("history").add({
+          "Item Name": rawItemName,
+          "Quantity": quantityController.text.trim(),
+          "Category": selectedCategory.value, // ✅ Added Category
+          "Date Generated": dateGenerated,
+          "Action": "Generate QR Code",
+        });
+
+
+        print("📜 ✅ History Log Added: $rawItemName - $dateGenerated");
+
         Get.back();
         Get.to(() => GeneratedQRCodeScreen(itemDetails: {...itemDetails, "QR Code": qrCodeUrl}));
 
@@ -111,63 +129,6 @@ class QRCodeController extends GetxController {
     }
   }
 
-  /// **Generate QR Code as an Image (Uint8List)**
-  Future<Uint8List> _generateQRImage(Map<String, dynamic> itemDetails) async {
-    try {
-      String qrData = itemDetails.entries.map((e) => "${e.key}: ${e.value}").join("\n");
-
-      final qrPainter = QrPainter(
-        data: qrData,
-        version: QrVersions.auto,
-        gapless: true,
-      );
-
-      final ByteData? byteData = await qrPainter.toImageData(300);
-      if (byteData == null) return Uint8List(0);
-
-      return byteData.buffer.asUint8List();
-    } catch (e) {
-      print("❌ QR Code Image Generation Failed: $e");
-      return Uint8List(0);
-    }
-  }
-
-  /// **Load Item Details from Firestore**
-  Future<void> loadItemDetails(String category, String itemName) async {
-    String categoryCollection = "categories/${_sanitizeCategory(category)}/items";
-    String formattedItemName = _sanitizeString(itemName);
-
-    DocumentSnapshot doc = await FirebaseFirestore.instance.collection(categoryCollection).doc(formattedItemName).get();
-
-    if (doc.exists) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      storageCodeController.text = data["storage_code"];
-      serialNoController.text = data["serial_no"];
-      itemNameController.text = data["item_name"];
-      brandController.text = data["brand"];
-      expirationDateController.text = data["expiration_date"];
-      unitMeasurementController.text = data["unit_measurement"];
-      specificationController.text = data["specifications"];
-      selectedCategory.value = data["category"];
-    }
-  }
-
-  /// **Sanitize String for Safe Use in Firebase Paths (File Names & Document IDs)**
-  String _sanitizeString(String input) {
-    return input
-        .trim()
-        .replaceAll(RegExp(r'[^\w]'), "_") // Replace non-word characters (except letters/numbers) with "_"
-        .replaceAll(RegExp(r'_+'), "_"); // Remove consecutive "__"
-  }
-
-  /// **Sanitize Category to Prevent Double Underscores**
-  String _sanitizeCategory(String category) {
-    return category
-        .replaceAll(":", "") // Remove colons
-        .replaceAll(" ", "_") // Replace spaces with a single underscore
-        .replaceAll(RegExp(r'_+'), "_") // Remove consecutive "__"
-        .trim();
-  }
 
   @override
   void onClose() {
@@ -178,6 +139,46 @@ class QRCodeController extends GetxController {
     expirationDateController.dispose();
     unitMeasurementController.dispose();
     specificationController.dispose();
+    quantityController.dispose(); // ✅ Dispose Quantity Controller
     super.onClose();
+  }
+}
+
+
+/// **Sanitize String for Safe Use in Firebase Paths (File Names & Document IDs)**
+String _sanitizeString(String input) {
+  return input
+      .trim()
+      .replaceAll(RegExp(r'[^\w]'), "_") // Replace non-word characters (except letters/numbers) with "_"
+      .replaceAll(RegExp(r'_+'), "_"); // Remove consecutive "__"
+}
+
+/// **Sanitize Category to Prevent Double Underscores**
+String _sanitizeCategory(String category) {
+  return category
+      .replaceAll(":", "") // Remove colons
+      .replaceAll(" ", "_") // Replace spaces with a single underscore
+      .replaceAll(RegExp(r'_+'), "_") // Remove consecutive "__"
+      .trim();
+}
+
+/// **Generate QR Code as an Image (Uint8List)**
+Future<Uint8List> _generateQRImage(Map<String, dynamic> itemDetails) async {
+  try {
+    String qrData = itemDetails.entries.map((e) => "${e.key}: ${e.value}").join("\n");
+
+    final qrPainter = QrPainter(
+      data: qrData,
+      version: QrVersions.auto,
+      gapless: true,
+    );
+
+    final ByteData? byteData = await qrPainter.toImageData(300);
+    if (byteData == null) return Uint8List(0);
+
+    return byteData.buffer.asUint8List();
+  } catch (e) {
+    print("❌ QR Code Image Generation Failed: $e");
+    return Uint8List(0);
   }
 }

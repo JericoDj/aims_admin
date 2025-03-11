@@ -1,4 +1,5 @@
 
+import 'package:aims_admin/screens/treatmentarea/treatment_area_qr_scanner.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -36,7 +37,7 @@ class TreatmentAreaScreen extends StatelessWidget {
             Center(
               child: GestureDetector(
                 onTap: () {
-                  Get.to(() => QRScannerScreen());
+                  Get.to(() => TreatmentQRScannerScreen());
                 },
                 child: Column(
                   children: [

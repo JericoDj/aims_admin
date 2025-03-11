@@ -26,6 +26,7 @@ class AuthenticationRepository extends GetxController {
   }
 
   /// **Create a new account with Firebase Authentication**
+  /// **Create a new account with Firebase Authentication**
   Future<void> createAccount({
     required String name,
     required String email,
@@ -42,6 +43,8 @@ class AuthenticationRepository extends GetxController {
           "Email is already in use. Please use a different email.",
           backgroundColor: Colors.red,
           colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          duration: Duration(seconds: 3), // ✅ Keep Snackbar visible
         );
         return;
       }
@@ -63,18 +66,23 @@ class AuthenticationRepository extends GetxController {
         "createdAt": FieldValue.serverTimestamp(),
       });
 
-      // **Step 4: Show success message & close dialog**
+      // **Step 4: Show success Snackbar**
       Get.snackbar(
         "Success",
         "Account created successfully!",
         backgroundColor: Colors.green,
         colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: Duration(seconds: 3), // ✅ Snackbar remains visible
       );
 
-      // Close the dialog after a short delay for UI visibility
-      Future.delayed(const Duration(milliseconds: 500), () {
-        Get.back();
+      // **Step 5: Close the dialog after Snackbar disappears**
+      Future.delayed(Duration(seconds: 3), () {
+        if (Get.isDialogOpen!) {
+          Get.back(); // ✅ Close dialog only after 3 seconds
+        }
       });
+
     } catch (e) {
       debugPrint("Error creating account: $e");
       Get.snackbar(
@@ -82,9 +90,12 @@ class AuthenticationRepository extends GetxController {
         "Failed to create account: ${e.toString()}",
         backgroundColor: Colors.red,
         colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: Duration(seconds: 3), // ✅ Ensure visibility
       );
     }
   }
+
 
   /// **Log in with email and password**
   Future<UserCredential?> loginWithEmailAndPassword(String email,

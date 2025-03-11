@@ -6,20 +6,28 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../utils/colors.dart';
 
-class QRScannerScreen extends StatefulWidget {
+class TreatmentQRScannerScreen extends StatefulWidget {
   @override
-  _QRScannerScreenState createState() => _QRScannerScreenState();
+  _TreatmentQRScannerScreenState createState() => _TreatmentQRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> {
-  final MobileScannerController scannerController = MobileScannerController();
+class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
+  final MobileScannerController scannerController = MobileScannerController(
+    autoStart: false,  // Prevent auto-start issues
+    facing: CameraFacing.back,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    scannerController.start();  // ✅ Ensures camera starts
+  }
 
 
-  bool _isDialogOpen = false; // ✅ Flag to prevent multiple scans
+  bool _isDialogOpen = false; // ✅ Prevent multiple scans
 
   Map<String, String> scannedItem = {}; // Stores scanned item data
-  TextEditingController quantityController = TextEditingController();
-  TextEditingController expirationController = TextEditingController();
+  TextEditingController usedQuantityController = TextEditingController(); // Input field for used items
 
   @override
   Widget build(BuildContext context) {
@@ -50,8 +58,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             ),
           ),
           title: Text(
-            "QR SCANNER",
-            style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold, fontSize: 28),
+            "TREATMENT QR SCANNER",
+            style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold, fontSize: 24),
           ),
         ),
         body: Column(
@@ -60,28 +68,24 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               child: MobileScanner(
                 controller: scannerController,
                 onDetect: (capture) {
-                  if (_isDialogOpen) return; // ✅ Prevent scanning again when the dialog is open
+                  if (_isDialogOpen) return; // ✅ Prevent duplicate scans while dialog is open
+
                   if (capture.barcodes.isNotEmpty) {
                     String scannedData = capture.barcodes.first.rawValue ?? "";
-                    print("📌 Raw Scanned Data: $scannedData");  // Debug scanned string
+                    print("📌 Raw Scanned Data: $scannedData");
 
                     setState(() {
                       scannedItem = _parseScannedData(scannedData);
                     });
 
-                    // Debugging output
                     print("📌 Scanned Data Map: $scannedItem");
                     print("📌 Category: ${scannedItem['category']}");
 
-                    // Populate text fields if data is available
-                    quantityController.text = scannedItem['quantity'] ?? "";
-                    expirationController.text = scannedItem['expiration_date'] ?? "";
+                    usedQuantityController.clear(); // Reset input field
 
-                    // Show dialog to edit details
-                    showEditDialog(context);
+                    showUsedItemsDialog(context);
                   }
                 },
-
               ),
             ),
             SizedBox(height: 20),
@@ -93,24 +97,20 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                     onPressed: () => scannerController.start(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: MyColors.darkRed,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                     ),
-                    child: Text("Start Scanning",
-                        style: TextStyle(color: Colors.white, fontSize: 20)),
+                    child: Text("Start Scanning", style: TextStyle(color: Colors.white, fontSize: 20)),
                   ),
                   SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: _pickAndDecodeQRFile,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: MyColors.red,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                     ),
-                    child: Text("Select File",
-                        style: TextStyle(color: Colors.white, fontSize: 20)),
+                    child: Text("Select File", style: TextStyle(color: Colors.white, fontSize: 20)),
                   ),
                 ],
               ),
@@ -134,20 +134,18 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     return parsedData;
   }
 
-  /// ✅ Function to Show Editable Dialog
-  void showEditDialog(BuildContext context) {
+  /// ✅ Function to Show Dialog for Used Items
+  void showUsedItemsDialog(BuildContext context) {
+    _isDialogOpen = true; // ✅ Prevent re-scanning
 
-    _isDialogOpen = true; // ✅ Set flag to true to prevent re-scanning
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           title: Center(
             child: Text(
-              "Edit Item Details",
+              "Log Used Items",
               style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red, fontSize: 24),
             ),
           ),
@@ -161,28 +159,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
                 SizedBox(height: 15),
 
-                Text("Enter Quantity", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
+                Text("Quantity Used", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
                 SizedBox(height: 5),
                 TextField(
-                  controller: quantityController,
+                  controller: usedQuantityController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    hintText: "Enter quantity",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  style: TextStyle(fontSize: 18),
-                ),
-
-                SizedBox(height: 15),
-
-                Text("Enter Expiration Date", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
-                SizedBox(height: 5),
-                TextField(
-                  controller: expirationController,
-                  keyboardType: TextInputType.datetime,
-                  decoration: InputDecoration(
-                    hintText: "YYYY-MM-DD",
+                    hintText: "Enter quantity used",
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
@@ -194,7 +177,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           actions: [
             ElevatedButton(
               onPressed: () {
-                _saveUpdatedData();
+                _logUsedItems();
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
@@ -205,6 +188,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             ),
             TextButton(
               onPressed: () {
+                _isDialogOpen = false;
                 Navigator.pop(context);
               },
               child: Text("CLOSE", style: TextStyle(color: MyColors.red, fontSize: 18)),
@@ -215,26 +199,34 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  void _saveUpdatedData() async {
+  /// ✅ Function to Log Used Items and Update Firestore
+  /// ✅ Function to Log Used Items, Update Firestore, and Save to History
+  /// ✅ Function to Log Used Items, Update Firestore, and Save to History
+  void _logUsedItems() async {
     if (scannedItem.isEmpty) return;
 
-    String itemName = scannedItem['item_name'] ?? "";
     String category = scannedItem['category'] ?? "";
-    String updatedQuantity = quantityController.text.trim();
-    String expirationDate = expirationController.text.trim();
+    String itemName = scannedItem['item_name'] ?? "";
+    String usedQuantityStr = usedQuantityController.text.trim();
     String dateUpdated = DateTime.now().toIso8601String(); // Capture timestamp
 
-    // Ensure category and item name use underscores instead of spaces
     category = category.replaceAll(" ", "_").replaceAll(":", "_");
     itemName = itemName.replaceAll(" ", "_").replaceAll(":", "_");
 
-    if (itemName.isEmpty || category.isEmpty) {
-      print("❌ Error: Missing item name or category. Cannot update Firestore.");
+    if (itemName.isEmpty || category.isEmpty || usedQuantityStr.isEmpty) {
+      print("❌ Error: Invalid input.");
       return;
     }
 
-    // Print document path for debugging
-    print("📌 Firestore Path: stock/$category/items/$itemName");
+    int usedQuantity = int.tryParse(usedQuantityStr) ?? 0;
+
+    if (usedQuantity <= 0) {
+      print("❌ Error: Invalid quantity input.");
+      Get.snackbar("Error", "Please enter a valid quantity.", backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    print("📌 Logging used items in Firestore: $category -> $itemName ($usedQuantity used)");
 
     try {
       DocumentReference itemRef = FirebaseFirestore.instance
@@ -243,66 +235,66 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           .collection('items')
           .doc(itemName);
 
-      await itemRef.set({
-        'quantity': updatedQuantity,
-        'expiration_date': expirationDate,
-      }, SetOptions(merge: true)); // Prevents overwriting existing data
+      // ✅ Fetch the current quantity from Firestore first
+      DocumentSnapshot snapshot = await itemRef.get();
 
-      setState(() {
-        scannedItem['quantity'] = updatedQuantity;
-        scannedItem['expiration_date'] = expirationDate;
+      if (!snapshot.exists || snapshot.data() == null) {
+        print("❌ Error: Item does not exist or 'quantity' field is missing.");
+        Get.snackbar("Error", "Item not found or missing 'quantity' field", backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
+
+      Map<String, dynamic> itemData = snapshot.data() as Map<String, dynamic>;
+
+      // ✅ Convert quantity from string to int
+      int currentQuantity = int.tryParse(itemData['quantity'].toString()) ?? 0; // Ensure it's an integer
+
+      if (currentQuantity < usedQuantity) {
+        print("❌ Error: Insufficient stock. Cannot use more than available.");
+        Get.snackbar("Error", "Insufficient stock. Only $currentQuantity available.", backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
+
+      // ✅ Subtract used quantity from stock and save as string
+      await itemRef.update({
+        'quantity': (currentQuantity - usedQuantity).toString(), // Store as string
       });
 
-      print("✅ Firestore Updated Successfully in $category -> $itemName!");
+      print("✅ Successfully logged used items!");
 
-      // ✅ Save update history in Firestore
+      // ✅ Save usage history in Firestore with Category
       await FirebaseFirestore.instance.collection("history").add({
         "Item Name": scannedItem['item_name'] ?? "Unknown",
-        "Quantity": updatedQuantity,
+        "Quantity": usedQuantityStr,
         "Category": scannedItem['category'] ?? "Unknown", // ✅ Added Category
-        "Action": "Update Stock",
+        "Action": "Treatment Use",
         "Date Updated": dateUpdated,
       });
 
-      print("✅ Update history saved!");
+      print("✅ Usage history saved!");
+
+      // Show a success message
+      Get.snackbar(
+        "Success",
+        "$usedQuantity used for ${scannedItem['item_name']}",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: Duration(seconds: 3),
+      );
 
     } catch (e) {
       print("❌ Firestore Update Error: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to log usage: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
 
 
-
-
-  /// ✅ Function to Pick and Decode QR Code from an Image
-  Future<void> _pickAndDecodeQRFile() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
-      if (image == null) return;
-
-      File selectedFile = File(image.path);
-      print("📌 Selected file: ${selectedFile.path}");
-
-      await _decodeQRCode(selectedFile);
-    } catch (e) {
-      print("⚠️ Error selecting file: $e");
-    }
-  }
-
-  /// ✅ Function to Decode QR Code from an Image
-  Future<void> _decodeQRCode(File file) async {
-    final BarcodeCapture? capture = await scannerController.analyzeImage(file.path);
-
-    if (capture != null && capture.barcodes.isNotEmpty) {
-      scannedItem = _parseScannedData(capture.barcodes.first.rawValue ?? "");
-      showEditDialog(context);
-    } else {
-      print("❌ No QR Code found in the image.");
-    }
-  }
 
   /// ✅ Helper Function to Display Item Details
   Widget _buildDetailRow(String label, String value) {
@@ -317,4 +309,41 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       ),
     );
   }
+  /// ✅ Function to Pick and Decode QR Code from an Image
+  Future<void> _pickAndDecodeQRFile() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image == null) return; // If user cancels selection, do nothing
+
+      File selectedFile = File(image.path);
+      print("📌 Selected file: ${selectedFile.path}");
+
+      await _decodeQRCode(selectedFile); // Process the image file
+    } catch (e) {
+      print("⚠️ Error selecting file: $e");
+    }
+  }
+
+  /// ✅ Function to Decode QR Code from an Image
+  Future<void> _decodeQRCode(File file) async {
+    final BarcodeCapture? capture = await scannerController.analyzeImage(file.path);
+
+    if (capture != null && capture.barcodes.isNotEmpty) {
+      setState(() {
+        scannedItem = _parseScannedData(capture.barcodes.first.rawValue ?? "");
+      });
+
+      print("✅ QR Code Data Decoded: $scannedItem");
+
+      if (!_isDialogOpen) {
+        showUsedItemsDialog(context);
+      }
+    } else {
+      print("❌ No QR Code found in the image.");
+    }
+  }
+
 }
+

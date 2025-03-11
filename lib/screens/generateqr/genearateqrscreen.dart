@@ -52,6 +52,7 @@ class GenerateQRCodeScreen extends StatelessWidget {
                 _buildTextField("Expiration Date (YYYY-MM-DD)", controller.expirationDateController),
                 _buildTextField("Unit of Measurement", controller.unitMeasurementController),
                 _buildTextField("Specifications", controller.specificationController),
+                _buildTextField("Quantity", controller.quantityController, isNumeric: true), // ✅ Added Quantity Field
 
                 SizedBox(height: 20),
 
@@ -78,11 +79,12 @@ class GenerateQRCodeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
+  Widget _buildTextField(String label, TextEditingController controller, {bool isNumeric = false}) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 5),
       child: TextFormField(
         controller: controller,
+        keyboardType: isNumeric ? TextInputType.number : TextInputType.text, // ✅ Numeric input for Quantity
         decoration: _inputDecoration(label),
         validator: (value) => value == null || value.isEmpty ? "This field is required" : null,
       ),

@@ -13,8 +13,6 @@ class InventoryScreen extends StatelessWidget {
   final ScreenshotController screenshotController = ScreenshotController();
   bool _isPickingFile = false;
 
-
-
   Future<void> _saveQRCodeToGallery(BuildContext context, String imageUrl, String itemName) async {
     if (_isPickingFile) return;
     _isPickingFile = true;
@@ -143,6 +141,14 @@ class InventoryScreen extends StatelessWidget {
                     itemCount: _controller.filteredItems.length,
                     itemBuilder: (context, index) {
                       var item = _controller.filteredItems[index];
+
+                      // ✅ Check for missing fields and provide defaults
+                      String itemName = item['name'] ?? "Unknown Item";
+                      String category = item['category'] ?? "Unknown Category";
+                      String quantity = item.containsKey('quantity') ? item['quantity'].toString() : "N/A";
+                      String expirationDate = item.containsKey('expiration_date') ? item['expiration_date'].toString() : "N/A";
+                      String qrCodeUrl = item['qr_code_url'] ?? "";
+
                       return GestureDetector(
                         onTap: () {
                           showDialog(
@@ -154,18 +160,20 @@ class InventoryScreen extends StatelessWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text("Name: ${item['name']}", style: TextStyle(fontSize: 18)),
-                                    Text("Category: ${item['category']}", style: TextStyle(fontSize: 18)),
-                                    Text("Available Stock: ${item['quantity'] ?? 'N/A'}", style: TextStyle(fontSize: 18)),
-
-                                    Text("Expiration Date: ${item['expiration_date']}", style: TextStyle(fontSize: 18)),
+                                    Text("Name: $itemName", style: TextStyle(fontSize: 18)),
+                                    Text("Category: $category", style: TextStyle(fontSize: 18)),
+                                    Text("Available Stock: $quantity", style: TextStyle(fontSize: 18)),
+                                    Text("Expiration Date: $expirationDate", style: TextStyle(fontSize: 18)),
                                     SizedBox(height: 10),
                                     Center(
                                       child: Screenshot(
                                         controller: screenshotController,
                                         child: Image.network(
-                                          "${item['qr_code_url']}",
+                                          qrCodeUrl,
                                           height: 100,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Icon(Icons.broken_image, size: 100, color: Colors.red);
+                                          },
                                         ),
                                       ),
                                     ),
@@ -175,22 +183,19 @@ class InventoryScreen extends StatelessWidget {
                                   Column(
                                     children: [
                                       TextButton(
-                                        onPressed: () => _saveQRCodeToGallery(context, item['qr_code_url'], item['name']),
+                                        onPressed: () => _saveQRCodeToGallery(context, qrCodeUrl, itemName),
                                         child: Text("Save QR Code", style: TextStyle(color: MyColors.red)),
                                       ),
-
                                       TextButton(
-                                        onPressed: () => _controller.confirmDeleteItem(context, item['category'], item['id'], item['name']),
+                                        onPressed: () => _controller.confirmDeleteItem(context, category, item['id'], itemName),
                                         child: Text("Delete", style: TextStyle(color: Colors.red)),
                                       ),
-
                                       TextButton(
                                         onPressed: () => Navigator.pop(context),
                                         child: Text("Close", style: TextStyle(color: MyColors.red)),
                                       ),
                                     ],
                                   ),
-
                                 ],
                               );
                             },
@@ -203,9 +208,15 @@ class InventoryScreen extends StatelessWidget {
                             side: BorderSide(color: MyColors.red, width: 1),
                           ),
                           child: ListTile(
-                            title: Text("${item['name']}", style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red)),
-                            subtitle: Text("Category: ${item['category']}"),
-                            trailing: Image.network("${item['qr_code_url']}", height: 50),
+                            title: Text(itemName, style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red)),
+                            subtitle: Text("Category: $category"),
+                            trailing: Image.network(
+                              qrCodeUrl,
+                              height: 50,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.broken_image, size: 50, color: Colors.red);
+                              },
+                            ),
                           ),
                         ),
                       );
