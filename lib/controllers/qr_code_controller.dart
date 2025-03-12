@@ -5,11 +5,15 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../screens/generateqr/generated_qr_code_screen.dart';
+import '../utils/notification_controller.dart';
 import '../utils/notification_service.dart';
 
 
 class QRCodeController extends GetxController {
+
+
   final formKey = GlobalKey<FormState>();
+
 
   // Controllers for input fields
   final TextEditingController storageCodeController = TextEditingController();
@@ -119,7 +123,8 @@ class QRCodeController extends GetxController {
         print("📜 ✅ History Log Added: $rawItemName - $dateGenerated");
 
         // **Send Notification to All Users**
-        await NotificationService.sendNotificationToAllUsers(
+        NotificationController notificationController = Get.find(); // Get the controller instance
+        await notificationController.sendNotificationToAllUsers(
             "New Item Added: $rawItemName",
             "A new item has been added to the inventory: $rawItemName. Check it out!"
         );

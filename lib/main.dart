@@ -1,5 +1,6 @@
 import 'package:aims_admin/repository/authentication_repository.dart';
 import 'package:aims_admin/utils/local_storage.dart';
+import 'package:aims_admin/utils/notification_controller.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -81,13 +82,19 @@ Future<void> _showNotification(RemoteMessage message) async {
   );
 }
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() async {
+
+
+    // Register the NotificationController globally before running the app
+    Get.put(NotificationController());
+
+    WidgetsFlutterBinding.ensureInitialized();
 
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
 
     // ✅ Initialize notifications
     await _initializeNotifications();

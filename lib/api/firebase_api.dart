@@ -31,11 +31,12 @@ class FirebaseAPI {
     // ✅ Handle Foreground Notifications
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('📩 Foreground Notification: ${message.notification?.title}');
-      print('📩 Message Data: ${message.data}');
     });
 
     // ✅ Set Background Message Handler
     FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage);
+
+
   }
 
   /// Get and Save FCM Token to Firestore

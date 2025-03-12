@@ -2,23 +2,20 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class NotificationService {
+class NotificationController extends GetxController {
   static const String _fcmUrl = 'https://fcm.googleapis.com/v1/projects/aims-5d185/messages:send';
 
-  // Generate an OAuth 2.0 access token for Firebase Cloud Messaging
-  static Future<String?> getAccessToken() async {
+  // **Generate an OAuth 2.0 access token for Firebase Cloud Messaging**
+  Future<String?> getAccessToken() async {
     try {
-      final serviceAccount = await rootBundle.loadString(
-          'assets/generated.json');
-
+      // Load service account credentials from assets
+      final serviceAccount = await rootBundle.loadString('assets/generated.json');
       final serviceAccountJson = json.decode(serviceAccount);
-      final accountCredentials = ServiceAccountCredentials.fromJson(
-          serviceAccountJson);
+      final accountCredentials = ServiceAccountCredentials.fromJson(serviceAccountJson);
 
       final authClient = await clientViaServiceAccount(
         accountCredentials,
@@ -32,18 +29,16 @@ class NotificationService {
     }
   }
 
-  // Fetch all FCM tokens from Firestore
-  static Future<List<String>> _getAllFcmTokens() async {
+  // **Fetch all FCM tokens from Firestore**
+  Future<List<String>> getAllFcmTokens() async {
     List<String> fcmTokens = [];
     try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection(
-          'users').get();
+      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('users').get();
 
       for (var doc in snapshot.docs) {
         var data = doc.data() as Map<String, dynamic>?;
 
-        if (data != null && data.containsKey('fcmToken') &&
-            data['fcmToken'] != null) {
+        if (data != null && data.containsKey('fcmToken') && data['fcmToken'] != null) {
           String fcmToken = data['fcmToken'];
           fcmTokens.add(fcmToken);
           print("✅ FCM Token found for user ${doc.id}: $fcmToken");
@@ -57,12 +52,12 @@ class NotificationService {
     return fcmTokens;
   }
 
-  // Send notification to a single FCM token
-
-  static Future<void> sendNotificationToToken(String fcmToken, String title, String body) async {
+  // **Send notification to a single FCM token**
+  Future<void> sendNotificationToToken(String fcmToken, String title, String body) async {
+    // Prepare the message data
     final message = {
       'message': {
-        'token': fcmToken,  // ✅ Correct field for FCM V1 API
+        'token': fcmToken,
         'notification': {
           'title': title,
           'body': body,
@@ -71,12 +66,14 @@ class NotificationService {
     };
 
     try {
+      // Get access token
       final accessToken = await getAccessToken();
       if (accessToken == null) {
         print("❌ Failed to get access token. Aborting notification.");
         return;
       }
 
+      // Send the notification to the specified FCM token
       final response = await http.post(
         Uri.parse(_fcmUrl),
         headers: {
@@ -86,24 +83,21 @@ class NotificationService {
         body: jsonEncode(message),
       );
 
+      // Handle the response
       if (response.statusCode == 200) {
         print("✅ Notification sent to $fcmToken");
       } else {
         print("❌ Failed to send notification to $fcmToken: ${response.body}");
       }
     } catch (e) {
-      // Log any errors when sending the notification
       print("❌ Error sending notification to $fcmToken: $e");
     }
   }
 
-  // Send notification to all users
-  // Send notification to all users
-  static Future<void> sendNotificationToAllUsers(String title,
-      String body) async {
+  // **Send notification to all users**
+  Future<void> sendNotificationToAllUsers(String title, String body) async {
     try {
-      // Fetch FCM tokens
-      List<String> fcmTokens = await _getAllFcmTokens();
+      List<String> fcmTokens = await getAllFcmTokens();
 
       if (fcmTokens.isEmpty) {
         print("⚠️ No valid FCM tokens found. Skipping notifications.");
@@ -112,18 +106,12 @@ class NotificationService {
 
       // Send notifications to each token
       for (String token in fcmTokens) {
-        await sendNotificationToToken(
-            token,
-            title,
-            body);
+        await sendNotificationToToken(token, title, body);
       }
 
       print('📲 ✅ Notifications sent to all users!');
     } catch (e) {
-      // Log any errors during the notification sending process
       print('❌ Error sending notifications: $e');
-      Get.snackbar('Error', 'Failed to send notifications: $e',
-          backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
 }
