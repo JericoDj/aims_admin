@@ -20,68 +20,67 @@ class GeneratedQRCodeScreen extends StatefulWidget {
 }
 
 class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
-  late ScreenshotController screenshotController;
+  final ScreenshotController screenshotController = ScreenshotController();
   bool _isPickingFile = false;
 
-  @override
-  void initState() {
-    super.initState();
-    screenshotController = ScreenshotController();
-  }
-
-  /// ✅ Function to Capture and Save QR Code with Item Name
+  /// ✅ Save QR Code to User Selected Directory
   Future<void> _saveQRCodeToGallery(BuildContext context) async {
     if (_isPickingFile) return;
     _isPickingFile = true;
 
-    if (await _requestStoragePermission()) {
-      try {
-        Uint8List? image = await screenshotController.capture(
-          pixelRatio: 4.0, // ✅ High DPI for clear image
-        );
+    try {
+      // ✅ Capture QR Code as Image
+      Uint8List? image = await screenshotController.captureFromWidget(
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.black, width: 2),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: QrImageView(
+            data: widget.itemDetails.entries.map((e) => "${e.key}: ${e.value}").join("\n"),
+            version: QrVersions.auto,
+            size: 200,
+            gapless: false,
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+          ),
+        ),
+        pixelRatio: 4.0,
+      );
 
-        if (image == null) {
-          _showSnackBar("QR Code capture failed.");
-          return;
-        }
-
-        String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-        if (selectedDirectory == null) {
-          _showSnackBar("No folder selected.");
-          return;
-        }
-
-        // ✅ Use item name in the file name
-        String itemName = widget.itemDetails['item_name'] ?? "QR_Code";
-        final String filePath = "$selectedDirectory/qr_${itemName.replaceAll(' ', '_')}.png";
-        File file = File(filePath);
-        await file.writeAsBytes(image);
-
-        // ✅ Refresh Gallery
-        await refreshGallery(filePath);
-        _showSnackBar("✅ QR Code saved to: $filePath");
-      } catch (e) {
-        _showSnackBar("❌ Failed to save QR Code: $e");
+      // ✅ Ensure Image Captured
+      if (image == null) {
+        Get.snackbar("Error", "QR Code capture failed.", backgroundColor: Colors.red, colorText: Colors.white);
+        return;
       }
-    } else {
-      _showSnackBar("❌ Storage permission denied.");
+
+      // ✅ Prompt User for Directory
+      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+      if (selectedDirectory == null) {
+        Get.snackbar("Error", "No folder selected.", backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
+
+      // ✅ Save QR Code Image
+      final String filePath = "$selectedDirectory/qr_code_${DateTime.now().millisecondsSinceEpoch}.png";
+      File file = File(filePath);
+      await file.writeAsBytes(image);
+
+      // ✅ Refresh Gallery for Android
+      if (Platform.isAndroid) await refreshGallery(filePath);
+
+      // ✅ Success Message
+      Get.snackbar("Success", "QR Code saved to: $filePath", backgroundColor: Colors.green, colorText: Colors.white);
+    } catch (e) {
+      Get.snackbar("Error", "Failed to save QR Code: $e", backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      _isPickingFile = false; // ✅ Reset Flag
     }
-    _isPickingFile = false;
   }
 
-  /// ✅ Request Storage Permission (Android 13+)
-  Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      var status = await Permission.manageExternalStorage.status;
-      if (!status.isGranted) {
-        status = await Permission.manageExternalStorage.request();
-      }
-      return status.isGranted;
-    }
-    return true;
-  }
-
-  /// ✅ Refresh Gallery to Show Saved Image
+  /// ✅ Refresh Gallery to Show Saved Image on Android
   Future<void> refreshGallery(String filePath) async {
     try {
       if (Platform.isAndroid) {
@@ -98,61 +97,52 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
     }
   }
 
-  /// ✅ Show Snack Bar
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
   @override
   Widget build(BuildContext context) {
-    String qrData = widget.itemDetails.entries
-        .map((e) => "${e.key}: ${e.value}")
-        .join("\n");
     String itemName = widget.itemDetails['item_name'] ?? "Unknown Item";
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: MyColors.red,
         centerTitle: true,
-        title: Text(
+        title: const Text(
           "Generated QR Code",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Get.back(),
         ),
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ✅ Screenshot Wrapper (QR Code + Item Name)
+              // ✅ QR Code + Item Name in Screenshot Wrapper
               Screenshot(
                 controller: screenshotController,
                 child: Container(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white, // ✅ Ensure white background
+                    color: Colors.white,
                     border: Border.all(color: MyColors.red, width: 2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Column(
                     children: [
                       QrImageView(
-                        data: qrData,
+                        data: widget.itemDetails.entries.map((e) => "${e.key}: ${e.value}").join("\n"),
                         version: QrVersions.auto,
-                        size: 200, // ✅ Higher resolution
+                        size: 200,
                         gapless: false,
                         backgroundColor: Colors.white,
-                        foregroundColor: Colors.black, // ✅ Ensure black QR code
+                        foregroundColor: Colors.black,
                       ),
-
+                      const SizedBox(height: 10),
                       Text(
-                        itemName, // ✅ Item Name Below QR Code
+                        itemName,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -164,23 +154,22 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // ✅ Save QR Code Button
               ElevatedButton(
                 onPressed: () => _saveQRCodeToGallery(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: MyColors.red,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                 ),
-                child: Text(
-
+                child: const Text(
                   "Save QR Code",
                   style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // ✅ Item Details Below QR Code
               Column(
@@ -190,11 +179,13 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("${entry.key}:", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text("${entry.key}:", style: const TextStyle(fontWeight: FontWeight.bold)),
                         Expanded(
-                          child: Text(entry.value,
-                              style: TextStyle(color: MyColors.red),
-                              textAlign: TextAlign.right),
+                          child: Text(
+                            entry.value,
+                            style: TextStyle(color: MyColors.red),
+                            textAlign: TextAlign.right,
+                          ),
                         ),
                       ],
                     ),
@@ -202,17 +193,11 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
                 }).toList(),
               ),
 
-              SizedBox(height: 20),
-
-              // ✅ Edit Details Button
-
-
-              SizedBox(height: 80),
+              const SizedBox(height: 80),
             ],
           ),
         ),
       ),
-
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../utils/notification_controller.dart';
+
 class EditItemController extends GetxController {
   TextEditingController quantityController = TextEditingController();
   TextEditingController expirationController = TextEditingController();
@@ -42,8 +44,21 @@ class EditItemController extends GetxController {
         "expiration_date": expirationController.text.isNotEmpty ? expirationController.text : "N/A",
       });
 
+      // **Send Notification to All Users**
+      NotificationController notificationController = Get.find(); // Get the controller instance
+      await notificationController.sendNotificationToAllUsers(
+          "Update from: $itemName",
+          "${quantityController.text}, Expiration: ${expirationController.text}. Check it out!"
+      );
+
+      // Fetch the updated document and print it
+      DocumentSnapshot updatedSnapshot = await itemRef.get();
+      print("✅ Firestore update successful! New Data:");
+      print("📌 Item: $itemName");
+      print("📦 Available Stock: ${updatedSnapshot.get("available_stock")}");
+      print("📅 Expiration Date: ${updatedSnapshot.get("expiration_date")}");
+
       Get.snackbar("Success", "Item updated successfully.");
-      print("✅ Firestore update successful! New Stock: $updatedStock");
 
     } catch (e) {
       print("❌ Error updating Firestore: $e");

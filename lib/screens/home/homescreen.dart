@@ -1,4 +1,5 @@
 import 'package:aims_admin/screens/manage_account/manage_accounts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -21,25 +22,26 @@ class _HomeScreenState extends State<HomeScreen> {
   bool hasNotification = true;
   bool isNotificationDrawerOpen = false;
 
+  // 🔥 Pagination variables for Firestore
+  List<DocumentSnapshot> notificationDocs = [];
+  bool isLoading = false;
+  bool hasMoreNotifications = true;
+  int notificationLimit = 5;
+  DocumentSnapshot? lastNotification;
 
   @override
   void initState() {
     super.initState();
     _initFirebaseNotifications();
+    _fetchNotifications();
   }
 
-
-
-  /// **Initializes Firebase Notifications only for logged-in users**
   Future<void> _initFirebaseNotifications() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       print("User logged in: ${user.uid}");
-
-      // Initialize Firebase Messaging
       await FirebaseAPI().initNotifications(user.uid);
 
-      // Handle background FCM notifications
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         _handleNotificationClick(message);
       });
@@ -48,20 +50,47 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// **Handles notification click and navigates to the correct screen**
   void _handleNotificationClick(RemoteMessage message) {
-    if (message.data.containsKey('receiverFullName') && message.data.containsKey('receiverEmail')) {
-
-
-      // Navigate to the chat screen
-      Get.to(() => HomeScreen(
-      ));
+    if (message.data.containsKey('receiverFullName') &&
+        message.data.containsKey('receiverEmail')) {
+      Get.to(() => HomeScreen());
     }
+  }
+
+  /// 🚀 Fetch initial notifications from Firestore
+  Future<void> _fetchNotifications() async {
+    if (isLoading || !hasMoreNotifications) return;
+
+    setState(() => isLoading = true);
+
+    Query query = FirebaseFirestore.instance
+        .collection('history')
+        .orderBy('Date Updated', descending: true)
+        .limit(notificationLimit);
+
+    if (lastNotification != null) {
+      query = query.startAfterDocument(lastNotification!);
+    }
+
+    QuerySnapshot snapshot = await query.get();
+
+    if (snapshot.docs.isNotEmpty) {
+      setState(() {
+        notificationDocs.addAll(snapshot.docs);
+        lastNotification = snapshot.docs.last;
+        if (snapshot.docs.length < notificationLimit) {
+          hasMoreNotifications = false;
+        }
+      });
+    } else {
+      setState(() => hasMoreNotifications = false);
+    }
+
+    setState(() => isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-
     return SafeArea(
       child: Scaffold(
         backgroundColor: MyColors.white,
@@ -77,8 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 fit: BoxFit.fitWidth,
               ),
             ),
-
-            // Main Content
             Column(
               children: [
                 _buildAppBar(),
@@ -104,11 +131,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         buildButton("STOCK ROOM", MyColors.white, MyColors.red,
                                 () => Get.to(() => StockRoomScreen())),
                         SizedBox(height: 20),
-                        buildButton("TREATMENT AREA", MyColors.white, MyColors.red,
-                                () => Get.to(() => TreatmentAreaScreen())),
+                        buildButton("TREATMENT AREA", MyColors.white,
+                            MyColors.red, () => Get.to(() => TreatmentAreaScreen())),
                         SizedBox(height: 20),
-                        buildButton("GENERATE QR CODE", MyColors.white, MyColors.red,
-                                () => Get.to(() => GenerateQRCodeScreen())),
+                        buildButton("GENERATE QR CODE", MyColors.white,
+                            MyColors.red, () => Get.to(() => GenerateQRCodeScreen())),
                         SizedBox(height: 80),
                       ],
                     ),
@@ -116,16 +143,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-
-            // Bottom Buttons (Fixed Position)
             Positioned(
               bottom: 20,
               left: 0,
               right: 0,
               child: Column(
                 children: [
+
+
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 80),
+                    padding: EdgeInsets.symmetric(horizontal: 80),
                     child: GestureDetector(
                       onTap: () => Get.to(() => ManageAccounts()),
                       child: Container(
@@ -156,8 +183,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-
-            // Notification Drawer
             if (isNotificationDrawerOpen) _buildNotificationDrawer(),
           ],
         ),
@@ -175,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             children: [
               IconButton(
-                icon: Icon(Icons.notifications, color: Colors.black, size: 36),
+                icon: Icon(Icons.notifications, size: 36),
                 onPressed: () => setState(() {
                   isNotificationDrawerOpen = !isNotificationDrawerOpen;
                   hasNotification = false;
@@ -198,7 +223,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           IconButton(
-            icon: Icon(Icons.logout, color: Colors.black, size: 28),
+            icon: Icon(Icons.logout, size: 28),
             onPressed: _showLogoutDialog,
           ),
         ],
@@ -212,10 +237,9 @@ class _HomeScreenState extends State<HomeScreen> {
       left: 0,
       right: 0,
       child: Material(
-
         elevation: 5,
         child: Container(
-          height: 250,
+          height: 350,
           padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: MyColors.white,
@@ -233,17 +257,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Divider(color: MyColors.red),
-              ListTile(
-                leading: Icon(Icons.info, color: MyColors.orange),
-                title: Text("New update available!",
-                    style: TextStyle(color: MyColors.red)),
-                subtitle: Text("Tap to update"),
-              ),
-              ListTile(
-                leading: Icon(Icons.check_circle, color: MyColors.orange),
-                title: Text("Backup Completed",
-                    style: TextStyle(color: MyColors.red)),
-                subtitle: Text("Your inventory is safe"),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: notificationDocs.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == notificationDocs.length) {
+                      return _buildLoadMoreButton();
+                    }
+                    final data = notificationDocs[index];
+                    return ListTile(
+                      leading: Icon(Icons.history, color: MyColors.orange),
+                      title: Text(
+                        data["Item Name"],
+                        style: TextStyle(
+                            color: MyColors.red, fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        "${data["Action"]}: ${data["Quantity"]} (${data["Category"]})",
+                      ),
+                      trailing: Text(
+                        _formatTimestamp(data["Date Updated"]),
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -251,6 +289,28 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _buildLoadMoreButton() {
+    if (!hasMoreNotifications) {
+      return Center(child: Text("No more notifications."));
+    }
+    return TextButton(
+      onPressed: _fetchNotifications,
+      child: isLoading
+          ? CircularProgressIndicator()
+          : Text("Load More", style: TextStyle(color: MyColors.red)),
+    );
+  }
+
+  String _formatTimestamp(String timestamp) {
+    try {
+      final dt = DateTime.parse(timestamp);
+      return "${dt.year}-${dt.month}-${dt.day} ${dt.hour}:${dt.minute}";
+    } catch (e) {
+      return "Invalid date";
+    }
+  }
+
   void _showLogoutDialog() {
     showDialog(
       context: context,
@@ -265,24 +325,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () async {
-              // Remove FCM token and UID from local storage
               await LocalStorage.deleteFCMToken();
               await LocalStorage.deleteUserId();
-
-              // Pop the logout dialog
               Navigator.pop(context);
-
-              // Navigate to LoginScreen
               Get.offAll(() => LoginScreen());
             },
             child: Text("Logout",
-                style: TextStyle(color: MyColors.orange, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: MyColors.orange)),
           ),
         ],
       ),
     );
   }
-
 
 
   Widget buildButton(String text, Color textColor, Color borderColor, VoidCallback onPressed) {

@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../utils/colors.dart';
+import '../../utils/notification_controller.dart';
 
 class QRScannerScreen extends StatefulWidget {
   @override
@@ -215,6 +216,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
+
   void _saveUpdatedData() async {
     if (scannedItem.isEmpty) return;
 
@@ -266,10 +268,20 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
       print("✅ Update history saved!");
 
+      // ✅ Send notification to all users
+      NotificationController notificationController = Get.find(); // Get the notification controller
+      await notificationController.sendNotificationToAllUsers(
+          "Stock Updated: $itemName",
+          "Quantity: $updatedQuantity, Expiration: $expirationDate"
+      );
+
+      print("📢 Notification sent successfully!");
+
     } catch (e) {
       print("❌ Firestore Update Error: $e");
     }
   }
+
 
 
 

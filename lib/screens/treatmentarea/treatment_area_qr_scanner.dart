@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../utils/colors.dart';
+import '../../utils/notification_controller.dart';
 
 class TreatmentQRScannerScreen extends StatefulWidget {
   @override
@@ -201,7 +202,7 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
 
   /// ✅ Function to Log Used Items and Update Firestore
   /// ✅ Function to Log Used Items, Update Firestore, and Save to History
-  /// ✅ Function to Log Used Items, Update Firestore, and Save to History
+
   void _logUsedItems() async {
     if (scannedItem.isEmpty) return;
 
@@ -273,14 +274,16 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
 
       print("✅ Usage history saved!");
 
-      // Show a success message
-      Get.snackbar(
-        "Success",
-        "$usedQuantity used for ${scannedItem['item_name']}",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: Duration(seconds: 3),
+      // ✅ Send notification to all users
+      NotificationController notificationController = Get.find(); // Get the notification controller
+      await notificationController.sendNotificationToAllUsers(
+          "Item Used: $itemName",
+          "$usedQuantity used from stock. Remaining stock: ${(currentQuantity - usedQuantity)}"
       );
+
+      print("📢 Notification sent successfully!");
+
+      // Show a success message
 
     } catch (e) {
       print("❌ Firestore Update Error: $e");
@@ -292,6 +295,7 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
       );
     }
   }
+
 
 
 
