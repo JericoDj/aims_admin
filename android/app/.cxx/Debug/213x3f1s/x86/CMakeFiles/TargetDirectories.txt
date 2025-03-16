@@ -1,0 +1,2 @@
+/Users/jericodejesus/projects/aims_admin/android/app/.cxx/Debug/213x3f1s/x86/CMakeFiles/edit_cache.dir
+/Users/jericodejesus/projects/aims_admin/android/app/.cxx/Debug/213x3f1s/x86/CMakeFiles/rebuild_cache.dir

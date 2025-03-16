@@ -1,0 +1,65 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "aims-5d185",
+          "appId": "1:640983208425:android:41154c8efb66d9229ebb78",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "aims-5d185",
+          "appId": "1:640983208425:ios:3b42fe2f79838e5c9ebb78",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "aims-5d185",
+          "appId": "1:640983208425:ios:3b42fe2f79838e5c9ebb78",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "aims-5d185",
+          "configurations": {
+            "android": "1:640983208425:android:41154c8efb66d9229ebb78",
+            "ios": "1:640983208425:ios:3b42fe2f79838e5c9ebb78",
+            "macos": "1:640983208425:ios:3b42fe2f79838e5c9ebb78",
+            "web": "1:640983208425:web:3608113aeab998719ebb78"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ],
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}
