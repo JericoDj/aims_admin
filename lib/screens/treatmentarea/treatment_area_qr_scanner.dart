@@ -202,7 +202,6 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
 
   /// ✅ Function to Log Used Items and Update Firestore
   /// ✅ Function to Log Used Items, Update Firestore, and Save to History
-
   void _logUsedItems() async {
     if (scannedItem.isEmpty) return;
 
@@ -240,8 +239,8 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
       DocumentSnapshot snapshot = await itemRef.get();
 
       if (!snapshot.exists || snapshot.data() == null) {
-        print("❌ Error: Item does not exist or 'quantity' field is missing.");
-        Get.snackbar("Error", "Item not found or missing 'quantity' field", backgroundColor: Colors.red, colorText: Colors.white);
+        print("❌ Error: Item does not exist in database.");
+        Get.snackbar("Error", "Item does not exist in database.", backgroundColor: Colors.red, colorText: Colors.white);
         return;
       }
 
@@ -295,9 +294,6 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
       );
     }
   }
-
-
-
 
 
   /// ✅ Helper Function to Display Item Details

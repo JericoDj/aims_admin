@@ -216,7 +216,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-
   void _saveUpdatedData() async {
     if (scannedItem.isEmpty) return;
 
@@ -232,6 +231,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     if (itemName.isEmpty || category.isEmpty) {
       print("❌ Error: Missing item name or category. Cannot update Firestore.");
+      Get.snackbar("Error", "Missing item name or category", backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
 
@@ -244,6 +244,14 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           .doc(category)
           .collection('items')
           .doc(itemName);
+
+      // ✅ Check if item exists before updating
+      DocumentSnapshot itemSnapshot = await itemRef.get();
+      if (!itemSnapshot.exists) {
+        print("❌ Error: Item does not exist in DataBase.");
+        Get.snackbar("Error", "Item does not exist in Firestore", backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
 
       await itemRef.set({
         'quantity': updatedQuantity,
@@ -279,6 +287,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     } catch (e) {
       print("❌ Firestore Update Error: $e");
+      Get.snackbar("Error", "Failed to update item: $e", backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
 

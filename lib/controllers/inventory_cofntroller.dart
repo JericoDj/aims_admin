@@ -116,14 +116,23 @@ class InventoryController extends GetxController {
   }
 
   /// Function to delete item from Firestore and its QR code from Firebase Storage
+  /// Function to delete item from Firestore and its corresponding QR code image from Firebase Storage
   Future<void> deleteItem(String category, String itemId, String itemName) async {
     try {
-      // Convert category spaces to underscores
+      // Convert category and itemName to correct format
       String formattedCategory = category.replaceAll(" ", "_");
-      String qrCodePath = "qr_codes/$formattedCategory/qr_$itemName.png";
+      String formattedItemName = itemName.replaceAll(" ", "_");
+      String qrCodePath = "qr_codes/$formattedCategory/qr_$formattedItemName.png";
 
       // Delete Firestore document
-      await FirebaseFirestore.instance.collection("stock").doc(category).collection("items").doc(itemId).delete();
+      await FirebaseFirestore.instance
+          .collection("stock")
+          .doc(category)
+          .collection("items")
+          .doc(itemId)
+          .delete();
+
+      print("✅ Firestore document deleted successfully");
 
       // Delete from Firebase Storage
       try {
@@ -134,13 +143,25 @@ class InventoryController extends GetxController {
       }
 
       // Show success notification
-      Get.snackbar("Success", "Item and QR Code deleted successfully", backgroundColor: Colors.green, colorText: Colors.white);
+      Get.snackbar(
+        "Success",
+        "Item and QR Code deleted successfully",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
 
       refreshInventory(); // Refresh inventory list after deletion
     } catch (e) {
-      Get.snackbar("Error", "Failed to delete item: $e", backgroundColor: Colors.red, colorText: Colors.white);
+      print("❌ Error deleting item: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to delete item: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
+
 
   /// Refresh inventory data
   void refreshInventory() {
