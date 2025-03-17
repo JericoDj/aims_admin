@@ -93,7 +93,7 @@ void main() async {
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
-    );
+    ).then((FirebaseApp value) => Get.put(AuthenticationRepository()));;
 
 
     // ✅ Initialize notifications
@@ -105,8 +105,6 @@ void main() async {
     // ✅ Request necessary permissions
     await _requestPermissions();
 
-    // ✅ Use `Get.put` to ensure AuthRepository is ready immediately
-    Get.put(AuthenticationRepository());
 
     if (kIsWeb) {
       // ✅ If running on web, use WebApp

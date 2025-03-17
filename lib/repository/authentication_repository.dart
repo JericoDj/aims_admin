@@ -4,13 +4,35 @@ import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:dio/dio.dart' as dio; // Rename Dio's Response class
+import 'package:dio/dio.dart' as dio;
+import 'package:get_storage/get_storage.dart';
+
+import '../screens/authentication/loginscreen.dart';
+import '../screens/home/homescreen.dart'; // Rename Dio's Response class
 
 class AuthenticationRepository extends GetxController {
   static AuthenticationRepository get instance => Get.find();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GetStorage _storage = GetStorage(); // Use GetStorage
+
+  @override
+  void onReady() async {
+    super.onReady();
+    await _checkUserStatus(); // Automatically check for saved user data on startup
+  }
+
+  /// **Check if user is saved in GetStorage**
+  Future<void> _checkUserStatus() async {
+    String? savedUserId = _storage.read<String>('userId');
+
+    if (savedUserId != null && savedUserId.isNotEmpty) {
+      Get.offAll(() => HomeScreen()); // Navigate to HomeScreen if user ID exists
+    } else {
+      Get.offAll(() => LoginScreen()); // Navigate to LoginScreen otherwise
+    }
+  }
 
   /// **Check if email already exists**
   Future<bool> checkEmailExists(String email) async {
