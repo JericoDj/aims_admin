@@ -18,6 +18,23 @@
     <key>FirebaseMessagingAutoInitEnabled</key>
     <true/>
 
+
+
+    <key>FirebaseAppDelegateProxyEnabled</key>
+    <false/>
+
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+        <string>processing</string>
+        <string>remote-notification</string>
+    </array>
+
+    <key>NSUserNotificationUsageDescription</key>
+    <string>We need permission to send you notifications.</string>
+
+
+
     <key>NSFileProtectionCompleteUntilFirstUserAuthentication</key>
     <string></string>
 

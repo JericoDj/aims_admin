@@ -17,7 +17,7 @@ FlutterLocalNotificationsPlugin();
 
 /// ✅ Background message handler (Must be a top-level function)
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint("✅ Background Message: ${message.notification?.title}");
+  debugPrint("✅ Background Message: \${message.notification?.title}");
 }
 
 /// ✅ Initialize Firebase Messaging and Notifications
@@ -37,28 +37,47 @@ Future<void> _initializeNotifications() async {
     debugPrint("❌ Notifications denied.");
   }
 
-  // ✅ Initialize Local Notifications
+  // ✅ Initialize Local Notifications for Android & iOS
   const AndroidInitializationSettings androidInitializationSettings =
   AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  final InitializationSettings initializationSettings =
-  InitializationSettings(android: androidInitializationSettings);
+  const DarwinInitializationSettings iosInitializationSettings =
+  DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: androidInitializationSettings,
+    iOS: iosInitializationSettings,
+  );
 
   await flutterLocalNotificationsPlugin.initialize(
     initializationSettings,
     onDidReceiveNotificationResponse: (NotificationResponse response) {
-      debugPrint("🔔 Notification Clicked: ${response.payload}");
+      debugPrint("🔔 Notification Clicked: \${response.payload}");
     },
   );
 
   // ✅ Listen for foreground messages
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    debugPrint("✅ Foreground Message: ${message.notification?.title}");
+    debugPrint("✅ Foreground Message: \${message.notification?.title}");
     _showNotification(message);
   });
 
   // ✅ Handle background messages
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // ✅ Ensure APNS token is fetched for iOS
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+    if (apnsToken != null) {
+      debugPrint("✅ APNS Token: \$apnsToken");
+    } else {
+      debugPrint("❌ Failed to fetch APNS token.");
+    }
+  }
 }
 
 /// ✅ Show local notification
@@ -83,18 +102,15 @@ Future<void> _showNotification(RemoteMessage message) async {
 }
 
 void main() async {
+  // Register the NotificationController globally before running the app
+  Get.put(NotificationController());
 
-
-    // Register the NotificationController globally before running the app
-    Get.put(NotificationController());
-
-    WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
-    ).then((FirebaseApp value) => Get.put(AuthenticationRepository()));;
-
+    ).then((FirebaseApp value) => Get.put(AuthenticationRepository()));
 
     // ✅ Initialize notifications
     await _initializeNotifications();
@@ -105,7 +121,6 @@ void main() async {
     // ✅ Request necessary permissions
     await _requestPermissions();
 
-
     if (kIsWeb) {
       // ✅ If running on web, use WebApp
       Get.testMode = true;
@@ -115,7 +130,7 @@ void main() async {
       runApp(const MyApp());
     }
   } catch (e) {
-    debugPrint("❌ Firebase initialization failed: $e");
+    debugPrint("❌ Firebase initialization failed: \$e");
   }
 }
 
