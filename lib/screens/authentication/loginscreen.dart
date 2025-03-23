@@ -24,6 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthenticationRepository _authRepo = AuthenticationRepository();
 
   Future<void> _login() async {
+    print("pressed");
+
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
@@ -33,40 +35,64 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Attempt login
-    UserCredential? userCredential =
-    await _authRepo.loginWithEmailAndPassword(email, password);
+    // Show loading spinner
+    Get.dialog(Center(child: CircularProgressIndicator()), barrierDismissible: false);
 
-    if (userCredential != null) {
-      User user = userCredential.user!;
-      bool isAdmin = await _checkIfUserIsAdmin(user);
+    try {
+      UserCredential? userCredential = await _authRepo.loginWithEmailAndPassword(email, password);
 
-      if (!isAdmin) {
-        try {
-          await _authRepo.setUserAsAdmin(user.uid);
-          isAdmin = await _checkIfUserIsAdmin(user);
+      if (userCredential != null) {
+        User user = userCredential.user!;
+        print("✅ User logged in: ${user.uid}");
 
-          if (!isAdmin) {
-            Get.snackbar("Access Denied", "Admin setup failed. Please contact support.",
+        bool isAdmin = await _checkIfUserIsAdmin(user);
+
+        if (!isAdmin) {
+          try {
+            print("🔧 Setting user as admin...");
+            await _authRepo.setUserAsAdmin(user.uid);
+
+            // Recheck if admin setup was successful
+            isAdmin = await _checkIfUserIsAdmin(user);
+
+            if (!isAdmin) {
+              Get.back(); // remove spinner
+              Get.snackbar("Access Denied", "Admin setup failed. Please contact support.",
+                  backgroundColor: Colors.red, colorText: Colors.white);
+              await FirebaseAuth.instance.signOut();
+              return;
+            }
+          } catch (e) {
+            Get.back(); // remove spinner
+            Get.snackbar("Error", "Failed to set admin: ${e.toString()}",
                 backgroundColor: Colors.red, colorText: Colors.white);
             await FirebaseAuth.instance.signOut();
             return;
           }
-        } catch (e) {
-          Get.snackbar("Error", "Failed to set admin: ${e.toString()}",
-              backgroundColor: Colors.red, colorText: Colors.white);
-          await FirebaseAuth.instance.signOut();
-          return;
         }
+
+        // ✅ Save user data locally only after successful login
+        await LocalStorage.saveUserId(user.uid);
+        await LocalStorage.saveFCMToken();
+
+        // All checks passed: go to home
+        Get.back(); // remove spinner
+        Get.offAll(() => HomeScreen());
+        Get.snackbar("Login Successful", "Welcome back!",
+            backgroundColor: Colors.green, colorText: Colors.white);
+      } else {
+        Get.back();
+        Get.snackbar("Login Failed", "Invalid credentials or user not found.",
+            backgroundColor: Colors.red, colorText: Colors.white);
       }
-
-
-      // Navigate to HomeScreen
-      Get.to(() => HomeScreen());
-      Get.snackbar("Login Successful", "Welcome back!",
-          backgroundColor: Colors.green, colorText: Colors.white);
+    } catch (e) {
+      Get.back();
+      Get.snackbar("Login Error", e.toString(),
+          backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
+
+
 
 
   Future<bool> _checkIfUserIsAdmin(User user) async {

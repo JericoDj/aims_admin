@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:sqflite/sqflite.dart';
 import '../../api/firebase_api.dart';
 import '../../utils/colors.dart';
 import '../../utils/local_storage.dart';
@@ -12,13 +13,20 @@ import '../authentication/loginscreen.dart';
 import '../generateqr/genearateqrscreen.dart';
 import '../stockroom/stockroom.dart';
 import '../treatmentarea/treatmentareascreen.dart';
+import 'offline_data_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
+
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+
+
+  bool isOnline = true; // 🔄 Switchable online/offline mode
+  Database? localDatabase; // ✅ Local database instance
+
   bool hasNotification = true;
   bool isNotificationDrawerOpen = false;
 
@@ -29,12 +37,17 @@ class _HomeScreenState extends State<HomeScreen> {
   int notificationLimit = 5;
   DocumentSnapshot? lastNotification;
 
+
+
+
   @override
   void initState() {
     super.initState();
     _initFirebaseNotifications();
     _fetchNotifications();
   }
+
+
 
   Future<void> _initFirebaseNotifications() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -56,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
       Get.to(() => HomeScreen());
     }
   }
+
 
   /// 🚀 Fetch initial notifications from Firestore
   Future<void> _fetchNotifications() async {
@@ -88,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() => isLoading = false);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -222,14 +237,80 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
             ],
           ),
-          IconButton(
-            icon: Icon(Icons.logout, size: 28),
-            onPressed: _showLogoutDialog,
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  isOnline ? Icons.cloud_done : Icons.cloud_off,
+                  color: isOnline ? MyColors.orange : Colors.red,
+                  size: 28,
+                ),
+                onPressed: _showDatabaseSwitchDialog, // Open switch dialog
+              ),
+
+              IconButton(
+                icon: Icon(Icons.logout, size: 28),
+                onPressed: _showLogoutDialog,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+
+
+  // ✅ Switchable Database Mode Dialog
+  void _showDatabaseSwitchDialog() {
+    showDialog(
+      context: this.context,
+      builder: (context) => AlertDialog(
+        title: Text("Database Settings",textAlign: TextAlign.center,),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Use Offline Database."),
+            SizedBox(height: 10),
+
+            // ✅ New Button: View Offline Data
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context); // Close the dialog
+                Get.to(() => OfflineDataScreen());
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: MyColors.orange,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.storage, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      "View Offline Data",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            )
+
+          ],
+        ),
+
+
+      ),
+    );
+  }
+
+
+
+
+
+
 
   Widget _buildNotificationDrawer() {
     return Positioned(
@@ -325,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () async {
-              await LocalStorage.deleteFCMToken();
+              // await LocalStorage.deleteFCMToken();
               await LocalStorage.deleteUserId();
               Navigator.pop(context);
               Get.offAll(() => LoginScreen());
@@ -368,4 +449,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+
+
 }
+

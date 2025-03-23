@@ -24,28 +24,45 @@ class LocalStorage {
 
 
 
+
   /// Save FCM token and link APNs if on iOS
   static Future<void> saveFCMToken() async {
-    final fcmToken = await FirebaseMessaging.instance.getToken();
-    if (fcmToken != null) {
-      await _storage.write(_fcmTokenKey, fcmToken);
-      print("✅ FCM Token saved locally: $fcmToken");
+    try {
+      // 🔒 Request permission first
+      await FirebaseMessaging.instance.requestPermission();
 
-      // On iOS, get APNs token and link with FCM
       if (Platform.isIOS) {
-        final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
-        if (apnsToken != null) {
-          await _storage.write(_apnTokenKey, apnsToken);
-          print("📱 APNs Token saved locally: $apnsToken");
+        String? apnsToken;
+        int retryCount = 0;
 
-          // Optional: register APNs token with FCM (mostly automatic)
-          await FirebaseMessaging.instance.setAutoInitEnabled(true);
-        } else {
-          print("⚠️ APNs Token is null. Make sure notifications are allowed.");
+        // ⏳ Wait for APNs token to be set (up to 5 seconds)
+        while (apnsToken == null && retryCount < 5) {
+          apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+          print("⏳ Waiting for APNs token... attempt ${retryCount + 1}");
+          await Future.delayed(Duration(seconds: 1));
+          retryCount++;
         }
+
+        if (apnsToken == null) {
+          print("⚠️ APNs Token still null after retries. Delaying FCM token registration.");
+          return;
+        }
+
+        await _storage.write(_apnTokenKey, apnsToken);
+        print("📱 APNs Token saved locally: $apnsToken");
       }
-    } else {
-      print("❌ FCM Token is null. Check Firebase initialization.");
+
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+
+      if (fcmToken != null) {
+        await _storage.write(_fcmTokenKey, fcmToken);
+        print("✅ FCM Token saved locally: $fcmToken");
+      } else {
+        print("❌ FCM Token is null even after APNs. Double-check Firebase setup.");
+      }
+
+    } catch (e) {
+      print("❌ Error saving FCM/APNs token: $e");
     }
   }
 
@@ -55,23 +72,45 @@ class LocalStorage {
 
 
 
-  // Delete FCM token from local storage
+
   static Future<void> deleteFCMToken() async {
     await _storage.remove(_fcmTokenKey);
-    await FirebaseMessaging.instance.deleteToken();
-    print("🗑️ FCM Token deleted locally and from Firebase");
 
     if (Platform.isIOS) {
+      final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+
+      if (apnsToken == null) {
+        print("⚠️ APNs token not available yet. Skipping Firebase token deletion on iOS.");
+      } else {
+        try {
+          await FirebaseMessaging.instance.deleteToken();
+          print("🗑️ FCM Token deleted from Firebase on iOS");
+        } catch (e) {
+          print("❌ Error deleting FCM token on iOS: $e");
+        }
+      }
+
       await _storage.remove(_apnTokenKey);
       print("🗑️ APNs Token deleted locally");
+    } else {
+      // For Android and others
+      try {
+        await FirebaseMessaging.instance.deleteToken();
+        print("🗑️ FCM Token deleted from Firebase");
+      } catch (e) {
+        print("❌ Error deleting FCM token: $e");
+      }
     }
   }
+
 
   // Save user UID to local storage
   static Future<void> saveUserId(String userId) async {
     await _storage.write(_userIdKey, userId);
     print("✅ User UID saved locally: $userId");
   }
+
+
 
 
   // Retrieve user UID from local storage
@@ -84,4 +123,31 @@ class LocalStorage {
     await _storage.remove(_userIdKey);
     print("✅ User UID deleted locally");
   }
+
+
+
+
+  // Key for server IP
+  static const String _serverIpKey = 'serverIp';
+
+// Save server IP
+  static Future<void> saveServerIp(String ip) async {
+    await _storage.write(_serverIpKey, ip);
+    print("✅ Server IP saved locally: $ip");
+  }
+
+// Get server IP
+  static String? getServerIp() {
+    return _storage.read<String>(_serverIpKey);
+  }
+
+// Delete server IP
+  static Future<void> deleteServerIp() async {
+    await _storage.remove(_serverIpKey);
+    print("✅ Server IP deleted locally");
+  }
+
+
 }
+
+
