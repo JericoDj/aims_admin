@@ -20,8 +20,7 @@
 
 
 
-    <key>FirebaseAppDelegateProxyEnabled</key>
-    <false/>
+
 
     <key>UIBackgroundModes</key>
     <array>
@@ -37,6 +36,10 @@
 
     <key>NSFileProtectionCompleteUntilFirstUserAuthentication</key>
     <string></string>
+
+
+    <key>CFBundleDisplayName</key>
+    <string>AIMS Admin</string>
 
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
