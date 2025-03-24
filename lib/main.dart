@@ -1,4 +1,5 @@
 import 'package:aims_admin/repository/authentication_repository.dart';
+import 'package:aims_admin/screens/home/offline/connect_to_offline_controller.dart';
 import 'package:aims_admin/utils/local_storage.dart';
 import 'package:aims_admin/utils/notification_controller.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -103,6 +104,8 @@ Future<void> _showNotification(RemoteMessage message) async {
 
 void main() async {
   // Register the NotificationController globally before running the app
+
+  Get.put(ConnectToOfflineController());
   Get.put(NotificationController());
 
   WidgetsFlutterBinding.ensureInitialized();

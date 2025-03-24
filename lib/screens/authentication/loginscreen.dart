@@ -19,9 +19,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+
+  bool _obscureText = true;
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthenticationRepository _authRepo = AuthenticationRepository();
+
 
   Future<void> _login() async {
     print("pressed");
@@ -153,6 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 20),
                       // Email text field with violet input text and label
                       TextField(
+
                         controller: _emailController,
                         style: TextStyle(color: MyColors.white),
                         decoration: InputDecoration(
@@ -170,8 +175,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 10),
                       // Password text field with violet input text and label
                       TextField(
+
                         controller: _passwordController,
-                        obscureText: true,
+                        obscureText: _obscureText,
                         style: TextStyle(color: MyColors.white),
                         decoration: InputDecoration(
                           labelText: 'Password',
@@ -183,6 +189,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderSide: BorderSide(color: MyColors.white, width: 2),
                           ),
                           prefixIcon: Icon(Icons.lock, color: MyColors.white),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureText ? Icons.visibility_off : Icons.visibility,
+                              color: MyColors.white,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureText = !_obscureText;
+                              });
+                            },
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),

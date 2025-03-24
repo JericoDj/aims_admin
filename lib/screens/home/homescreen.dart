@@ -142,7 +142,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+
+                        Text(
+                          "ADMIN APP",
+
+                          style: TextStyle(color: MyColors.red, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2),
+                        ),
                         SizedBox(height: 20),
+
+
                         buildButton("STOCK ROOM", MyColors.white, MyColors.red,
                                 () => Get.to(() => StockRoomScreen())),
                         SizedBox(height: 20),

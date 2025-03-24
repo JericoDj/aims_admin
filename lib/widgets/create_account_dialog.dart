@@ -65,7 +65,7 @@ class _CreateAccountDialogState extends State<CreateAccountDialog> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildChoiceChip("User", setState),
+                      _buildChoiceChip("Nurse", setState),
                       const SizedBox(width: 15),
                       _buildChoiceChip("Admin", setState),
                     ],

@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../../utils/colors.dart';
 import 'offline/DataBaseHelper.dart';
 import 'offline/connect_to_offline_controller.dart';
 import 'offline/local_server.dart';
@@ -76,6 +77,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
   }
 
   /// 🚀 Start Local Network Server
+  /// 🚀 Start Local Network Server
   void _startServer() async {
     try {
       // Check if the server is already running
@@ -112,6 +114,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
           backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
+
 
 
   /// ✅ Add New Data to Offline Database
@@ -196,6 +199,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
     // Only clear if successful
     _clearFormFields();
     Get.back();
+    Navigator.pop(context);
   }
 
   /// 🌐 Get Current Server IP Address
@@ -306,38 +310,72 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
 
   /// ✅ Use Item Dialog
   void _showUseItemDialog(Map<String, dynamic> item) {
-    // Ensure quantity is parsed correctly
     final int id = item['id'];
     final int currentQuantity = int.tryParse(item['quantity'].toString()) ?? 0;
     final TextEditingController _quantityUsedController = TextEditingController();
     final controller = Get.find<ConnectToOfflineController>();
 
+    showDialog(
+      context: Get.context!,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 🔴 Title with Close Button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "🧰 Use Item",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: MyColors.red,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close, color: Colors.grey[700]),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  Divider(),
 
-    Get.defaultDialog(
-      title: "Use Item",
-      content: Container(
-        height: 380,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Item Name: ${item['itemName']}"),
-              Text("Serial No: ${item['serialNo']}"),
-              Text("Brand: ${item['brand']}"),
-              Text("Storage Code: ${item['storageCode']}"),
-              Text("Expiration Date: ${item['expirationDate']}"),
-              Text("Unit: ${item['unitMeasurement']}"),
-              Text("Specification: ${item['specification']}"),
-              SizedBox(height: 8),
-              Text("Current Quantity: $currentQuantity", style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
-              _buildTextField("Quantity to Use", _quantityUsedController, isNumeric: true),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: ElevatedButton(
-                  onPressed: () async {
-                    try {
-                      print("🟢 Update button pressed!");
+                  // 🔹 Item Details
+                  _buildInfoRow("Item Name", item['itemName']),
+                  _buildInfoRow("Serial No", item['serialNo']),
+                  _buildInfoRow("Brand", item['brand']),
+                  _buildInfoRow("Storage Code", item['storageCode']),
+                  _buildInfoRow("Expiration Date", item['expirationDate']),
+                  _buildInfoRow("Unit", item['unitMeasurement']),
+                  _buildInfoRow("Specification", item['specification']),
+                  SizedBox(height: 10),
+
+                  Text(
+                    "Current Quantity: $currentQuantity",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: MyColors.orange,
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  _buildTextField("Quantity to Use", _quantityUsedController, isNumeric: true),
+
+                  SizedBox(height: 20),
+
+                  // ✅ Update Button
+                  GestureDetector(
+                    onTap: () async {
                       final quantityUsed = int.tryParse(_quantityUsedController.text) ?? 0;
 
                       if (quantityUsed <= 0) {
@@ -355,31 +393,209 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                       }
 
                       final success = await controller.updateItemQuantity(id, newQuantity);
-                      print("📬 Update success? $success");
 
                       if (success) {
                         await _loadOfflineData();
-                        Get.back();
+                        Navigator.of(context).pop();
                         Get.snackbar("Success", "Quantity updated successfully!",
                             backgroundColor: Colors.green, colorText: Colors.white);
                       } else {
                         Get.snackbar("Error", "Failed to update quantity",
                             backgroundColor: Colors.red, colorText: Colors.white);
                       }
-                    } catch (e, stack) {
-                      print("💥 Unexpected error: $e");
-                      Get.snackbar("Error", "Update failed: ${e.toString()}",
-                          backgroundColor: Colors.red, colorText: Colors.white);
-                    }
-                  },
-                  child: Text("Update"),
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: MyColors.red,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Center(
+                        child: Text("Update",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 12),
+
+                  // ❌ Cancel Button
+                  Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text("Cancel", style: TextStyle(color: Colors.grey[700])),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  Widget _buildInfoRow(String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Text(
+        "$label: $value",
+        style: TextStyle(fontSize: 14),
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, {bool isNumeric = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontWeight: FontWeight.w600,fontSize: 16)),
+        SizedBox(height: 5),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade500),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+            decoration: InputDecoration(
+              contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+
+
+
+  void _confirmDeleteOfflineData(int id) {
+    showDialog(
+      context: Get.context!,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          title: Text(
+            "Confirm Delete",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: MyColors.red,
+            ),
+          ),
+          content: Text("Are you sure you want to delete this item?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("No", style: TextStyle(color: Colors.grey[700])),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: MyColors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: TextButton(
-                  onPressed: () => Get.back(),
-                  child: Text("Cancel"),
+              onPressed: () async {
+                await _databaseHelper.deleteDataById(id);
+                await _loadOfflineData(); // Refresh list
+                Navigator.of(context).pop(); // Close dialog
+                Get.snackbar(
+                  "Deleted",
+                  "Item deleted successfully",
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
+                );
+              },
+              child: Text("Yes", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+
+  /// ✅ Add New Data Dialog
+  void _showAddDataDialog() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Container(
+          height: 500,
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🔴 Custom Title Row with "X" Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Add New Data",
+                    style: TextStyle(
+                      color: MyColors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.grey[700]),
+                    onPressed: () => Get.back(),
+                  ),
+                ],
+              ),
+
+              Divider(),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTextField("Storage Code", _storageCodeController),
+                      _buildTextField("Serial No.", _serialNoController),
+                      _buildTextField("Item Name", _itemNameController),
+                      _buildTextField("Brand", _brandController),
+                      _buildTextField("Expiration Date (YYYY-MM-DD)", _expirationDateController),
+                      _buildTextField("Unit of Measurement", _unitMeasurementController),
+                      _buildTextField("Specifications", _specificationController),
+                      _buildTextField("Quantity", _quantityController, isNumeric: true),
+
+                      SizedBox(height: 20),
+
+                      GestureDetector(
+                        onTap: _addNewData,
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: MyColors.red,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Center(
+                            child: Text("Add Data", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: 12),
+
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Get.back(),
+                          child: Text("Cancel", style: TextStyle(color: Colors.grey[700])),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -388,159 +604,99 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
       ),
       barrierDismissible: false,
     );
-
-  }
-
-
-
-  void _confirmDeleteOfflineData(int id) {
-    Get.defaultDialog(
-      title: "Confirm Delete",
-      middleText: "Are you sure you want to delete this item?",
-      backgroundColor: Colors.white,
-      titleStyle: TextStyle(fontWeight: FontWeight.bold),
-      textConfirm: "Yes",
-      textCancel: "No",
-      confirmTextColor: Colors.white,
-      buttonColor: Colors.red,
-      onConfirm: () async {
-        await _databaseHelper.deleteDataById(id);
-        await _loadOfflineData(); // Refresh list
-        Get.back(); // Close dialog
-        Get.snackbar("Deleted", "Item deleted successfully",
-            backgroundColor: Colors.red, colorText: Colors.white);
-      },
-      onCancel: () {
-        Get.back(); // Close dialog if cancelled
-      },
-    );
-  }
-
-
-  /// ✅ Add New Data Dialog
-  void _showAddDataDialog() {
-    Get.defaultDialog(
-      title: "Add New Data",
-      content: Container(
-        height: 370,  // Set the height of the dialog to 400
-        child: SingleChildScrollView(  // Make the content scrollable
-          child: Column(
-            children: [
-              _buildTextField("Storage Code", _storageCodeController),
-              _buildTextField("Serial No.", _serialNoController),
-              _buildTextField("Item Name", _itemNameController),
-              _buildTextField("Brand", _brandController),
-              _buildTextField("Expiration Date (YYYY-MM-DD)", _expirationDateController),
-              _buildTextField("Unit of Measurement", _unitMeasurementController),
-              _buildTextField("Specifications", _specificationController),
-              _buildTextField("Quantity", _quantityController, isNumeric: true),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: ElevatedButton(
-                  onPressed: _addNewData,  // Add data on button press
-                  child: Text("Add Data"),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: TextButton(
-                  onPressed: () => Get.back(),  // Close the dialog
-                  child: Text("Cancel"),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,  // Prevent dialog from being dismissed outside
-    );
   }
 
 
 
 
 
-  /// ✅ Build TextFields for Input
-  Widget _buildTextField(String label, TextEditingController controller, {bool isNumeric = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
-        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
+
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Offline Database"),
-        backgroundColor: Colors.blue,
+        title: Text("Offline Database", style: TextStyle(color: Colors.white)),
+        backgroundColor: MyColors.red,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Get.back(),
         ),
+        elevation: 4,
+        shadowColor: Colors.blue.shade200,
       ),
       body: Column(
         children: [
+
           // ✅ Add New Data Button
           Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: ElevatedButton.icon(
-              icon: Icon(Icons.add, color: Colors.white),
-              label: Text("Add New Data"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+            padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
+            child: GestureDetector(
+              onTap: _showAddDataDialog,
+              child: Container(
+                margin: EdgeInsets.only(top: 15),
                 padding: EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: MyColors.orange,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      "Add New Data",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              onPressed: _showAddDataDialog,
             ),
           ),
 
+          // 🚫 Stop Server Button
           Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: ElevatedButton.icon(
-              icon: Icon(Icons.stop_circle, color: Colors.white),
-              label: Text("Stop Server"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+            padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
+            child: GestureDetector(
+              onTap: _stopServer,
+              child: Container(
                 padding: EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: MyColors.red,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.stop_circle, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      "Stop Server",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              onPressed: _stopServer,
             ),
           ),
 
+// 🚀 Start Local Network Server Button
 
-          // 🚀 Start Server Button
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: ElevatedButton.icon(
-              icon: Icon(Icons.wifi_tethering, color: Colors.white),
-              label: Text("Start Local Network Server"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: EdgeInsets.symmetric(vertical: 12),
-              ),
-              onPressed: _startServer,
-            ),
-          ),
 
-          // ☁️ Upload to Online Button
+
+          // ☁️ Upload to Online Button (Updated)
           Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: ElevatedButton.icon(
-              icon: Icon(Icons.cloud_upload, color: Colors.white),
-              label: Text("Upload to Online"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                padding: EdgeInsets.symmetric(vertical: 12),
-              ),
-              onPressed: () async {
+            padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
+            child: GestureDetector(
+              onTap: () async {
                 final FirebaseFirestore firestore = FirebaseFirestore.instance;
                 final localData = await _databaseHelper.getAllData();
 
@@ -562,7 +718,6 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                   if (querySnapshot.docs.isNotEmpty) {
                     matched.add({...item, 'docId': querySnapshot.docs.first.id});
 
-                    // 🔍 Debug log for matched item
                     print("✅ MATCHED:");
                     print("📦 item_name: ${item['itemName']}");
                     print("🔢 serial_no: ${item['serialNo']}");
@@ -579,8 +734,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                 }
 
                 if (matched.isEmpty && unmatched.isEmpty) {
-                  Get.snackbar("Info", "No local data found.",
-                      backgroundColor: Colors.grey);
+                  Get.snackbar("Info", "No local data found.", backgroundColor: Colors.grey);
                   return;
                 }
 
@@ -602,64 +756,56 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                             itemBuilder: (context, index) {
                               final item = matched[index];
                               return ListTile(
-                                  title: Text(item['itemName']),
-                                  subtitle: Text("Qty: ${item['quantity']} | Serial: ${item['serialNo']}"),
-                                  trailing: ElevatedButton(
-                                    onPressed: () async {
-                                      try {
-                                        final existingQty = item['quantity'];
-                                        final docId = item['docId'];
+                                title: Text(item['itemName']),
+                                subtitle: Text("Qty: ${item['quantity']} | Serial: ${item['serialNo']}"),
+                                trailing: ElevatedButton(
+                                  onPressed: () async {
+                                    try {
+                                      final existingQty = item['quantity'];
+                                      final docId = item['docId'];
 
-                                        // ✅ Correct Firestore path based on your structure
-                                        final doc = await firestore
-                                            .collection('stock')
-                                            .doc('Medical_Equipments')
-                                            .collection('items')
-                                            .doc(docId)
-                                            .get();
+                                      final doc = await firestore
+                                          .collection('stock')
+                                          .doc('Medical_Equipments')
+                                          .collection('items')
+                                          .doc(docId)
+                                          .get();
 
-                                        if (!doc.exists) {
-                                          print("❌ Document does not exist: $docId");
-                                          Get.snackbar("Error", "Document not found in Firestore.",
-                                              backgroundColor: Colors.red, colorText: Colors.white);
-                                          return;
-                                        }
-
-                                        // ✅ Safely parse quantity even if stored as string
-                                        final prevQty = int.tryParse(doc['quantity'].toString()) ?? 0;
-
-                                        // ✅ Update the document in the correct path
-                                        await firestore
-                                            .collection('stock')
-                                            .doc('Medical_Equipments')
-                                            .collection('items')
-                                            .doc(docId)
-                                            .update({
-                                          'quantity': prevQty + existingQty,
-                                          'expiration_date': item['expirationDate'], // make sure field name matches Firestore
-                                        });
-
-                                        // ✅ Delete from local SQLite
-                                        await _databaseHelper.deleteDataById(item['id']);
-
-                                        // ✅ Update UI
-                                        matched.removeAt(index);
-                                        _offlineData.removeWhere((e) => e['id'] == item['id']);
-                                        setState(() {});
-
-                                        Get.snackbar("Uploaded", "${item['itemName']} uploaded successfully",
-
-                                            backgroundColor: Colors.green, colorText: Colors.white);
-                                        Get.back();
-                                      } catch (e) {
-                                        print("❌ Upload error: $e");
-                                        Get.snackbar("Error", "Failed to upload item: ${e.toString()}",
+                                      if (!doc.exists) {
+                                        print("❌ Document does not exist: $docId");
+                                        Get.snackbar("Error", "Document not found in Firestore.",
                                             backgroundColor: Colors.red, colorText: Colors.white);
+                                        return;
                                       }
-                                    },
-                                    child: Text("Upload"),
-                                  )
 
+                                      final prevQty = int.tryParse(doc['quantity'].toString()) ?? 0;
+
+                                      await firestore
+                                          .collection('stock')
+                                          .doc('Medical_Equipments')
+                                          .collection('items')
+                                          .doc(docId)
+                                          .update({
+                                        'quantity': prevQty + existingQty,
+                                        'expiration_date': item['expirationDate'],
+                                      });
+
+                                      await _databaseHelper.deleteDataById(item['id']);
+                                      matched.removeAt(index);
+                                      _offlineData.removeWhere((e) => e['id'] == item['id']);
+                                      setState(() {});
+
+                                      Get.snackbar("Uploaded", "${item['itemName']} uploaded successfully",
+                                          backgroundColor: Colors.orange, colorText: Colors.white);
+                                      Get.back();
+                                    } catch (e) {
+                                      print("❌ Upload error: $e");
+                                      Get.snackbar("Error", "Failed to upload item: ${e.toString()}",
+                                          backgroundColor: Colors.red, colorText: Colors.white);
+                                    }
+                                  },
+                                  child: Text("Upload"),
+                                ),
                               );
                             },
                           ),
@@ -685,9 +831,61 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                   isScrollControlled: true,
                 );
               },
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: MyColors.orange,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cloud_upload, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      "Upload to Online",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
 
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
+            child: GestureDetector(
+              onTap: _startServer,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: MyColors.red, // You can change this to MyColors.green if defined
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.wifi_tethering, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      "Start Local Network Server",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+
+          // ✅ Display Offline Data
           // ✅ Display Offline Data
           Expanded(
             child: _offlineData.isEmpty
@@ -696,29 +894,27 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
               itemCount: _offlineData.length,
               itemBuilder: (context, index) {
                 final entry = _offlineData[index];
-                return Card(
-                  margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  child: ListTile(
-                    title: Text(entry['itemName'] ?? "Unknown Data"),
-                    subtitle: Text("Quantity: ${entry['quantity']}"),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.handyman, color: Colors.green), // "Use Item" Button
-                          onPressed: () => _showUseItemDialog(entry),
-                        ),
-                        IconButton(
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal:20.0, vertical: 5),
+                  child: GestureDetector(
+                    onTap: () => _showUseItemDialog(entry), // 👈 Make the card clickable
+                    child: Card(
+
+                      child: ListTile(
+                        title: Text(entry['itemName'] ?? "Unknown Data"),
+                        subtitle: Text("Quantity: ${entry['quantity']}"),
+                        trailing: IconButton(
                           icon: Icon(Icons.delete, color: Colors.red), // "Delete" Button
                           onPressed: () => _confirmDeleteOfflineData(entry['id']),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 );
               },
             ),
           ),
+
         ],
       ),
     );
