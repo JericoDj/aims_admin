@@ -1,72 +1,167 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:math';
 import 'package:aims_admin/controllers/inventory_cofntroller.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image/image.dart' as img;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:saver_gallery/saver_gallery.dart';
 import 'package:screenshot/screenshot.dart';
-import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storage
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../utils/colors.dart';
 
 class InventoryScreen extends StatelessWidget {
   final InventoryController _controller = Get.put(InventoryController());
   final ScreenshotController screenshotController = ScreenshotController();
-  bool _isPickingFile = false;
+  bool _isSaving = false;
 
-  Future<void> _saveQRCodeToGallery(BuildContext context, String imageUrl, String itemName) async {
-    if (_isPickingFile) return;
-    _isPickingFile = true;
+  Future<bool> _checkPermissions() async {
+    if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt >= 33) {
+        final status = await Permission.photos.status;
+        return status.isGranted;
+      } else {
+        final status = await Permission.storage.status;
+        return status.isGranted;
+      }
+    } else if (Platform.isIOS) {
+      final status = await Permission.photosAddOnly.status;
+      return status.isGranted;
+    }
+    return false;
+  }
+
+  Future<void> _requestPermissions() async {
+    if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt >= 33) {
+        await Permission.photos.request();
+      } else {
+        await Permission.storage.request();
+      }
+    } else if (Platform.isIOS) {
+      await Permission.photosAddOnly.request();
+    }
+  }
+
+  Future<void> _saveQRCodeToGallery(BuildContext context, String qrData, String itemName) async {
+    if (_isSaving) return;
+    _isSaving = true;
+
+    Get.dialog(
+      Center(child: CircularProgressIndicator(color: MyColors.red)),
+      barrierDismissible: false,
+    );
 
     try {
-      Uint8List? image = await screenshotController.captureFromWidget(
-        Container(
-          padding: EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.black, width: 2),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.network(
-                imageUrl,
-                height: 150,
-                width: 150,
-                fit: BoxFit.contain,
+      if (!await _checkPermissions()) {
+        await _requestPermissions();
+        if (!await _checkPermissions()) {
+          Get.back();
+          Get.defaultDialog(
+            title: "Permission Required",
+            middleText: "Please enable storage permissions in app settings",
+            textConfirm: "Open Settings",
+            confirmTextColor: Colors.white,
+            onConfirm: () async {
+              await openAppSettings();
+              Get.back();
+            },
+            textCancel: "Cancel",
+          );
+          return;
+        }
+      }
+
+      final rawName = itemName;
+      final sanitized = rawName
+          .replaceAll(RegExp(r'[^\w\\s-]'), '')
+          .replaceAll(' ', '_')
+          .substring(0, min(rawName.length, 50));
+
+      // Capture the widget as image bytes
+      final rawImage = await screenshotController.captureFromWidget(
+        RepaintBoundary(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Container(
+
+
+              color: Colors.white,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  QrImageView(
+                    data: qrData,
+                    version: QrVersions.auto,
+                    gapless: false,
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    rawName,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
+
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              SizedBox(height: 10),
-              Text(
-                itemName,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
-                textAlign: TextAlign.center,
-              ),
-            ],
+            ),
           ),
         ),
-        pixelRatio: 4.0,
+        pixelRatio: 3.0,
       );
 
-      if (image == null) {
-        Get.snackbar("Error", "QR Code capture failed.", backgroundColor: Colors.red, colorText: Colors.white);
-        return;
-      }
+      if (rawImage.isEmpty) throw Exception("Failed to generate QR image");
 
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-      if (selectedDirectory == null) {
-        Get.snackbar("Error", "No folder selected.", backgroundColor: Colors.red, colorText: Colors.white);
-        return;
-      }
+      // Decode → Rotate → Flip
+      final decoded = img.decodeImage(rawImage);
+      if (decoded == null) throw Exception("Failed to decode image");
+      final rotated = img.copyRotate(decoded, angle: 180);
+      final flipped = img.flipHorizontal(rotated);
+      final finalBytes = Uint8List.fromList(img.encodePng(flipped));
 
-      final String filePath = "$selectedDirectory/qr_code_${DateTime.now().millisecondsSinceEpoch}.png";
-      File file = File(filePath);
-      await file.writeAsBytes(image);
+      final result = await SaverGallery.saveImage(
+        finalBytes,
+        fileName: "${sanitized}_${DateTime.now().millisecondsSinceEpoch}",
+        quality: 95,
+        androidRelativePath: "Pictures/YourAppName",
+        skipIfExists: false,
+      );
 
-      Get.snackbar("Success", "QR Code saved to: $filePath", backgroundColor: Colors.green, colorText: Colors.white);
+      if (!result.isSuccess) throw Exception("Failed to save to gallery");
+
+      Get.back();
+      Get.snackbar(
+        "Success!",
+        "QR Code saved successfully!",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
     } catch (e) {
-      Get.snackbar("Error", "Failed to save QR Code: $e", backgroundColor: Colors.red, colorText: Colors.white);
+      if (Get.isDialogOpen!) Get.back();
+      Get.snackbar(
+        "Error",
+        e.toString().replaceAll("Exception: ", ""),
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      _isSaving = false;
     }
-    _isPickingFile = false;
   }
 
   @override
@@ -81,14 +176,14 @@ class InventoryScreen extends StatelessWidget {
           leading: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Container(
-              height: 40,
-              width: 40,
+              height: 35,
+              width: 35,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: MyColors.darkRed,
               ),
               child: IconButton(
-                icon: Icon(Icons.arrow_back, color: MyColors.white, size: 36),
+                icon: Icon(Icons.arrow_back, color: MyColors.white, size: 28),
                 padding: EdgeInsets.zero,
                 constraints: BoxConstraints(),
                 onPressed: () {
@@ -117,116 +212,127 @@ class InventoryScreen extends StatelessWidget {
                 onChanged: _controller.filterSearch,
                 decoration: InputDecoration(
                   hintText: "Search item...",
-                  hintStyle: TextStyle(fontSize: 20),
-                  prefixIcon: Icon(Icons.search, color: MyColors.red, size: 24),
+                  prefixIcon: Icon(Icons.search, color: MyColors.red),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: MyColors.red),
                   ),
                 ),
-                style: TextStyle(fontSize: 18),
               ),
             ),
             Expanded(
               child: Obx(() {
                 if (_controller.filteredItems.isEmpty) {
-                  return Center(
-                    child: Text(
-                      "No items found.",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: MyColors.red),
-                    ),
-                  );
-                } else {
-                  return ListView.builder(
-                    itemCount: _controller.filteredItems.length,
-                    itemBuilder: (context, index) {
-                      var item = _controller.filteredItems[index];
-
-                      // ✅ Check for missing fields and provide defaults
-                      String itemName = item['name'] ?? "Unknown Item";
-                      String category = item['category'] ?? "Unknown Category";
-                      String quantity = item.containsKey('quantity') ? item['quantity'].toString() : "N/A";
-                      String expirationDate = item.containsKey('expiration_date') ? item['expiration_date'].toString() : "N/A";
-                      String qrCodeUrl = item['qr_code_url'] ?? "";
-
-                      return GestureDetector(
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: Text("Item Details", style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold)),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text("Name: $itemName", style: TextStyle(fontSize: 18)),
-                                    Text("Category: $category", style: TextStyle(fontSize: 18)),
-                                    Text("Available Stock: $quantity", style: TextStyle(fontSize: 18)),
-                                    Text("Expiration Date: $expirationDate", style: TextStyle(fontSize: 18)),
-                                    SizedBox(height: 10),
-                                    Center(
-                                      child: Screenshot(
-                                        controller: screenshotController,
-                                        child: Image.network(
-                                          qrCodeUrl,
-                                          height: 100,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Icon(Icons.broken_image, size: 100, color: Colors.red);
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                actions: [
-                                  Column(
-                                    children: [
-                                      TextButton(
-                                        onPressed: () => _saveQRCodeToGallery(context, qrCodeUrl, itemName),
-                                        child: Text("Save QR Code", style: TextStyle(color: MyColors.red)),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => _controller.confirmDeleteItem(context, category, item['id'], itemName),
-                                        child: Text("Delete", style: TextStyle(color: Colors.red)),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: Text("Close", style: TextStyle(color: MyColors.red)),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                        child: Card(
-                          margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(color: MyColors.red, width: 1),
-                          ),
-                          child: ListTile(
-                            title: Text(itemName, style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red)),
-                            subtitle: Text("Category: $category"),
-                            trailing: Image.network(
-                              qrCodeUrl,
-                              height: 50,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.broken_image, size: 50, color: Colors.red);
-                              },
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
+                  return Center(child: Text("No items found.", style: TextStyle(color: MyColors.red)));
                 }
+                return ListView.builder(
+                  itemCount: _controller.filteredItems.length,
+                  itemBuilder: (context, index) {
+                    var item = _controller.filteredItems[index];
+                    String itemName = item['name'] ?? "Unknown Item";
+                    String category = item['category'] ?? "Unknown Category";
+                    String qrData = item['qr_code_url'] ?? "";
+
+                    return Card(
+                      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: MyColors.red),
+                      ),
+                      child: ListTile(
+                        title: Text(itemName, style: TextStyle(color: MyColors.red)),
+                        subtitle: Text("Category: $category"),
+                        trailing: QrImageView(
+                          data: qrData,
+                          size: 50,
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        onTap: () => _showItemDetails(context, item),
+                      ),
+                    );
+                  },
+                );
               }),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showItemDetails(BuildContext context, Map<String, dynamic> item) {
+    String itemName = item['name'] ?? "Unknown Item";
+    String category = item['category'] ?? "Unknown Category";
+    String quantity = item['quantity']?.toString() ?? "N/A";
+    String expirationDate = item['expiration_date']?.toString() ?? "N/A";
+    String qrData = item['qr_code_url'] ?? "";
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.9),
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Item Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                SizedBox(height: 16),
+                _buildDetailRow("Name:", itemName),
+                _buildDetailRow("Category:", category),
+                _buildDetailRow("Stock:", quantity),
+                _buildDetailRow("Expiry:", expirationDate),
+                SizedBox(height: 16),
+                Center(
+                  child: Screenshot(
+                    controller: screenshotController,
+                    child: QrImageView(
+                      data: qrData,
+                      size: 150,
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: () => _saveQRCodeToGallery(context, qrData, itemName),
+                      child: Text("Save QR", style: TextStyle(color: MyColors.red)),
+                    ),
+                    TextButton(
+                      onPressed: () => _controller.confirmDeleteItem(context, category, item['id'], itemName),
+                      child: Text("Delete", style: TextStyle(color: Colors.red)),
+                    ),
+                    TextButton(
+                      onPressed: Get.back,
+                      child: Text("Close", style: TextStyle(color: MyColors.red)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(width: 8),
+          Text(value),
+        ],
       ),
     );
   }

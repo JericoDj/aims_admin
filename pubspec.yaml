@@ -75,8 +75,14 @@ dependencies:
   shelf_router: ^1.1.4
 
 
-  flutter_background_service: ^5.1.0
-  flutter_background_service_android: ^6.3.0
+  saver_gallery: ^4.0.1
+  external_path: ^2.2.0
+  device_info_plus: ^11.3.3
+
+
+
+
+
 
 
 
