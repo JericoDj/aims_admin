@@ -23,6 +23,9 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
   final LocalServer _localServer = LocalServer(); // Initialize Server
   List<Map<String, dynamic>> _offlineData = [];
 
+  List<Map<String, dynamic>> unmatched = []; // Declare unmatched here
+
+
   final RxBool _isServerRunning = false.obs;
   final RxString _serverIp = ''.obs;
 
@@ -855,11 +858,15 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                                   return ListTile(
                                     title: Text(item['itemName']),
                                     subtitle: Text("Qty: ${item['quantity']} | Serial: ${item['serialNo']}"),
-                                    trailing: Icon(Icons.warning, color: Colors.orange),
+                                    trailing: IconButton(
+                                      icon: Icon(Icons.edit, color: MyColors.orange), // Edit button
+                                      onPressed: () => _showEditItemDialog(item, index),
+                                    ),
                                   );
                                 },
                               ),
                             ),
+
                           ],
                         ),
                       ),
@@ -910,5 +917,158 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
         ],
       ),
     );
+
+
   }
+  void _showEditItemDialog(Map<String, dynamic> item, int index) {
+    final TextEditingController _itemNameController = TextEditingController(text: item['itemName']);
+    final TextEditingController _serialNoController = TextEditingController(text: item['serialNo']);
+    final TextEditingController _brandController = TextEditingController(text: item['brand']);
+    final TextEditingController _storageCodeController = TextEditingController(text: item['storageCode']);
+    final TextEditingController _expirationDateController = TextEditingController(text: item['expirationDate']);
+    final TextEditingController _quantityController = TextEditingController(text: item['quantity'].toString());
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Container(
+          padding: EdgeInsets.all(16),
+          height: 500, // Increase the height of the dialog
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with close button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Edit Item",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.grey[700]),
+                    onPressed: () => Get.back(),
+                  ),
+                ],
+              ),
+              Divider(),
+
+              // Make the dialog content scrollable
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTextField("Item Name", _itemNameController),
+                      _buildTextField("Serial No.", _serialNoController),
+                      _buildTextField("Brand", _brandController),
+                      _buildTextField("Storage Code", _storageCodeController),
+                      _buildTextField("Expiration Date", _expirationDateController),
+                      _buildTextField("Quantity", _quantityController, isNumeric: true),
+                    ],
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 16),
+
+              // Save Changes Button at the bottom of the dialog
+              GestureDetector(
+                onTap: () async {
+                  // Validate fields before proceeding
+                  if (_itemNameController.text.isEmpty || _serialNoController.text.isEmpty) {
+                    Get.snackbar("Error", "Please fill in the required fields.",
+                        backgroundColor: Colors.red, colorText: Colors.white);
+                    return;
+                  }
+
+                  final updatedItem = {
+                    'itemName': _itemNameController.text,
+                    'serialNo': _serialNoController.text,
+                    'brand': _brandController.text,
+                    'storageCode': _storageCodeController.text,
+                    'expirationDate': _expirationDateController.text,
+                    'quantity': int.tryParse(_quantityController.text) ?? 0,
+                  };
+
+                  // Check if the item already exists in Firebase and upload if matched
+                  await _checkIfItemMatchedAndUpload(updatedItem, index);
+
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: MyColors.red,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "Save Changes",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> _checkIfItemMatchedAndUpload(Map<String, dynamic> updatedItem, int index) async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    try {
+      // Query Firebase to check for a matching item
+      final querySnapshot = await firestore
+          .collection('stock')
+          .doc('Medical_Equipments')
+          .collection('items')
+          .where('itemName', isEqualTo: updatedItem['itemName'])
+          .where('serialNo', isEqualTo: updatedItem['serialNo'])
+          .where('brand', isEqualTo: updatedItem['brand'])
+          .where('storageCode', isEqualTo: updatedItem['storageCode'])
+          .where('expirationDate', isEqualTo: updatedItem['expirationDate'])
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final doc = querySnapshot.docs.first;
+        final existingData = doc.data();
+        final existingQty = existingData['quantity'] ?? 0;
+
+        // Update Firebase with the new quantity
+        await firestore.collection('items').doc(doc.id).update({
+          'quantity': existingQty + updatedItem['quantity'],
+          'expirationDate': updatedItem['expirationDate'], // Optional: Can skip if not needed
+        });
+
+        // Delete from local database
+        await _databaseHelper.deleteDataById(updatedItem['id']);
+
+        // Remove from unmatched list and refresh UI
+        unmatched.removeAt(index);
+        setState(() {});
+
+        Get.snackbar("Success", "${updatedItem['itemName']} uploaded successfully.",
+            backgroundColor: Colors.green, colorText: Colors.white);
+      } else {
+        Get.snackbar("No match found", "Item does not exist in Firebase.",
+            backgroundColor: Colors.red, colorText: Colors.white);
+      }
+    } catch (e) {
+      print("Error checking item: $e");
+      Get.snackbar("Error", "Error while checking item: ${e.toString()}",
+          backgroundColor: Colors.red, colorText: Colors.white);
+    }
+  }
+
+
+
 }
