@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:saver_gallery/saver_gallery.dart';
 import 'package:screenshot/screenshot.dart';
 import '../../utils/colors.dart';
@@ -23,20 +22,15 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
   final ScreenshotController _screenshotController = ScreenshotController();
   bool _isSaving = false;
 
-  // Enhanced permission handling
   Future<bool> _checkPermissions() async {
     if (Platform.isAndroid) {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       if (androidInfo.version.sdkInt >= 33) {
-        final status = await Permission.photos.status;
-        return status.isGranted;
-      } else {
-        final status = await Permission.storage.status;
-        return status.isGranted;
+        return await Permission.photos.status.isGranted;
       }
+      return await Permission.storage.status.isGranted;
     } else if (Platform.isIOS) {
-      final status = await Permission.photosAddOnly.status;
-      return status.isGranted;
+      return await Permission.photosAddOnly.status.isGranted;
     }
     return false;
   }
@@ -76,31 +70,19 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
         throw Exception("Failed to capture QR code");
       }
 
-// Decode the image
-      final decoded = img.decodeImage(rawImage);
-      if (decoded == null) throw Exception("Image decode failed");
-
-// // Rotate 180 degrees
-//       final rotated = img.copyRotate(decoded, angle: 180);
-//
-// // Flip horizontally to undo mirror effect
-//       final flipped = img.flipHorizontal(rotated);
-
-// Encode as PNG
-      final finalBytes = Uint8List.fromList(img.encodePng(decoded));
-
       final result = await SaverGallery.saveImage(
-        finalBytes,
+        rawImage,
         fileName: "${sanitized}_${DateTime.now().millisecondsSinceEpoch}",
         quality: 100,
         androidRelativePath: "Pictures/YourAppName",
         skipIfExists: false,
       );
+
       if (result.isSuccess) {
         Get.snackbar("Success", "QR Code saved as $sanitized!",
             backgroundColor: Colors.green, colorText: Colors.white);
       } else {
-        throw Exception("Gallery save returned false");
+        throw Exception("Gallery save failed");
       }
     } catch (e) {
       Get.snackbar("Error", "Failed to save QR Code: ${e.toString()}",
@@ -110,10 +92,10 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final itemName = widget.itemDetails['item_name'] ?? "Unknown Item";
+    final qrCodeUrl = widget.itemDetails['qr_code_url'] ?? "";
 
     return Scaffold(
       appBar: AppBar(
@@ -142,15 +124,26 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
                   ),
                   child: Column(
                     children: [
-                      QrImageView(
-                        data: widget.itemDetails.entries
-                            .map((e) => "${e.key}: ${e.value}")
-                            .join("\n"),
-                        version: QrVersions.auto,
-                        size: 200,
-                        gapless: false,
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
+                      Image.network(
+                        qrCodeUrl,
+                        height: 200,
+                        width: 200,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, progress) {
+                          return progress == null
+                              ? child
+                              : const CircularProgressIndicator();
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Column(
+                            children: [
+                              const Icon(Icons.error, color: Colors.red, size: 50),
+                              const SizedBox(height: 10),
+                              Text("Failed to load QR code",
+                                  style: TextStyle(color: MyColors.red)),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 10),
                       Text(itemName,

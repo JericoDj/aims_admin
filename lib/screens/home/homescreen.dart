@@ -393,6 +393,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         _formatTimestamp(data["Date Updated"]),
                         style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
+                      onTap: () {
+                        final historyData = data.data() as Map<String, dynamic>?;
+                        if (historyData != null) {
+                          _showHistoryDetailsDialog(historyData);
+                        }
+                      },
                     );
                   },
                 ),
@@ -404,6 +410,71 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showHistoryDetailsDialog(Map<String, dynamic> historyData) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("History Details",
+            style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...historyData.entries.map((entry) => Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("${entry.key}:",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: MyColors.red)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                          entry.key == "Date Updated"
+                              ? _formatTimestamp(entry.value)
+                              : entry.value.toString(),
+                          style: TextStyle(color: Colors.black)),
+                    ),
+                  ],
+                ),
+              )).toList(),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Close", style: TextStyle(color: MyColors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Updated timestamp formatter to handle Firestore Timestamp
+  String _formatTimestamp(dynamic timestamp) {
+    try {
+      DateTime date;
+
+      if (timestamp is Timestamp) {
+        date = timestamp.toDate();
+      } else if (timestamp is String) {
+        date = DateTime.parse(timestamp);
+      } else {
+        return "Invalid date";
+      }
+
+      return "${date.year}-${date.month.toString().padLeft(2, '0')}-"
+          "${date.day.toString().padLeft(2, '0')} "
+          "${date.hour.toString().padLeft(2, '0')}:"
+          "${date.minute.toString().padLeft(2, '0')}";
+    } catch (e) {
+      return "Invalid date";
+    }
+  }
   Widget _buildLoadMoreButton() {
     if (!hasMoreNotifications) {
       return Center(child: Text("No more notifications."));
@@ -416,14 +487,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _formatTimestamp(String timestamp) {
-    try {
-      final dt = DateTime.parse(timestamp);
-      return "${dt.year}-${dt.month}-${dt.day} ${dt.hour}:${dt.minute}";
-    } catch (e) {
-      return "Invalid date";
-    }
-  }
 
   void _showLogoutDialog() {
     showDialog(

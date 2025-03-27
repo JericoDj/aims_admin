@@ -3,16 +3,11 @@ import 'dart:typed_data';
 import 'dart:math';
 import 'package:aims_admin/controllers/inventory_cofntroller.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:saver_gallery/saver_gallery.dart';
 import 'package:screenshot/screenshot.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../../utils/colors.dart';
 
 class InventoryScreen extends StatelessWidget {
@@ -24,15 +19,11 @@ class InventoryScreen extends StatelessWidget {
     if (Platform.isAndroid) {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       if (androidInfo.version.sdkInt >= 33) {
-        final status = await Permission.photos.status;
-        return status.isGranted;
-      } else {
-        final status = await Permission.storage.status;
-        return status.isGranted;
+        return await Permission.photos.status.isGranted;
       }
+      return await Permission.storage.status.isGranted;
     } else if (Platform.isIOS) {
-      final status = await Permission.photosAddOnly.status;
-      return status.isGranted;
+      return await Permission.photosAddOnly.status.isGranted;
     }
     return false;
   }
@@ -50,7 +41,7 @@ class InventoryScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _saveQRCodeToGallery(BuildContext context, String qrData, String itemName) async {
+  Future<void> _saveQRCodeToGallery(BuildContext context, String qrUrl, String itemName) async {
     if (_isSaving) return;
     _isSaving = true;
 
@@ -84,45 +75,43 @@ class InventoryScreen extends StatelessWidget {
           .replaceAll(RegExp(r'[^\w\\s-]'), '')
           .replaceAll(' ', '_');
 
-// Safe substring logic
-      final sanitizedFileName = sanitized.isNotEmpty
-          ? sanitized.substring(0, min(sanitized.length, 50))
-          : '';
-
-      // Capture the widget as image bytes
       final rawImage = await screenshotController.captureFromWidget(
         RepaintBoundary(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Container(
-
-
+          child: Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
               color: Colors.white,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  QrImageView(
-                    data: qrData,
-                    version: QrVersions.auto,
-                    gapless: false,
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
+              border: Border.all(color: Colors.black, width: 2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.network(
+                  qrUrl,
+                  height: 150,
+                  width: 150,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, progress) {
+                    return progress == null
+                        ? child
+                        : CircularProgressIndicator();
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(Icons.broken_image, size: 150, color: Colors.red);
+                  },
+                ),
+                SizedBox(height: 10),
+                Text(
+                  rawName,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    rawName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
-                    textAlign: TextAlign.center,
-
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ),
@@ -131,15 +120,8 @@ class InventoryScreen extends StatelessWidget {
 
       if (rawImage.isEmpty) throw Exception("Failed to generate QR image");
 
-      // Decode → Rotate → Flip
-      final decoded = img.decodeImage(rawImage);
-      if (decoded == null) throw Exception("Failed to decode image");
-      // final rotated = img.copyRotate(decoded, angle: 180);
-      // final flipped = img.flipHorizontal(rotated);
-      final finalBytes = Uint8List.fromList(img.encodePng(decoded));
-
       final result = await SaverGallery.saveImage(
-        finalBytes,
+        rawImage,
         fileName: "${sanitized}_${DateTime.now().millisecondsSinceEpoch}",
         quality: 95,
         androidRelativePath: "Pictures/YourAppName",
@@ -180,16 +162,16 @@ class InventoryScreen extends StatelessWidget {
           leading: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Container(
-              height: 35,
-              width: 35,
+              height: 40, // Adjusted container size (small but fits icon)
+              width: 40,  // Ensure it's a perfect square
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: MyColors.darkRed,
               ),
               child: IconButton(
-                icon: Icon(Icons.arrow_back, color: MyColors.white, size: 28),
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(),
+                icon: Icon(Icons.arrow_back, color: MyColors.white, size: 28), // Increased icon size
+                padding: EdgeInsets.zero, // Removes extra padding inside the button
+                constraints: BoxConstraints(), // Prevents extra spacing issues
                 onPressed: () {
                   Get.back();
                 },
@@ -216,43 +198,64 @@ class InventoryScreen extends StatelessWidget {
                 onChanged: _controller.filterSearch,
                 decoration: InputDecoration(
                   hintText: "Search item...",
-                  prefixIcon: Icon(Icons.search, color: MyColors.red),
+                  hintStyle: TextStyle(fontSize: 20),
+                  prefixIcon: Icon(Icons.search, color: MyColors.red, size: 24),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(color: MyColors.red),
                   ),
                 ),
+                style: TextStyle(fontSize: 18),
               ),
             ),
             Expanded(
               child: Obx(() {
                 if (_controller.filteredItems.isEmpty) {
-                  return Center(child: Text("No items found.", style: TextStyle(color: MyColors.red)));
+                  return Center(
+                    child: Text(
+                      "No items found.",
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: MyColors.red),
+                    ),
+                  );
                 }
                 return ListView.builder(
                   itemCount: _controller.filteredItems.length,
                   itemBuilder: (context, index) {
-                    var item = _controller.filteredItems[index];
-                    String itemName = item['name'] ?? "Unknown Item";
-                    String category = item['category'] ?? "Unknown Category";
-                    String qrData = item['qr_code_url'] ?? "";
+                    final item = _controller.filteredItems[index];
+                    final itemName = item['name'] ?? "Unknown Item";
+                    final category = item['category'] ?? "Unknown Category";
+                    final qrData = item['qr_code_url'] ?? "";
 
-                    return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: MyColors.red),
-                      ),
-                      child: ListTile(
-                        title: Text(itemName, style: TextStyle(color: MyColors.red)),
-                        subtitle: Text("Category: $category"),
-                        trailing: QrImageView(
-                          data: qrData,
-                          size: 50,
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
+                    return GestureDetector(
+                      onTap: () => _showItemDetails(context, item),
+                      child: Card(
+                        margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: MyColors.red, width: 1),
                         ),
-                        onTap: () => _showItemDetails(context, item),
+                        child: ListTile(
+                          title: Text(itemName,
+                              style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red)),
+                          subtitle: Text("Category: $category"),
+                          trailing: Image.network(
+                            qrData,
+                            height: 50,
+                            width: 50,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (context, child, progress) {
+                              return progress == null
+                                  ? child
+                                  : SizedBox(
+                                  height: 50,
+                                  width: 50,
+                                  child: CircularProgressIndicator());
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(Icons.broken_image, size: 50, color: Colors.red);
+                            },
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -266,25 +269,25 @@ class InventoryScreen extends StatelessWidget {
   }
 
   void _showItemDetails(BuildContext context, Map<String, dynamic> item) {
-    String itemName = item['name'] ?? "Unknown Item";
-    String category = item['category'] ?? "Unknown Category";
-    String quantity = item['quantity']?.toString() ?? "N/A";
-    String expirationDate = item['expiration_date']?.toString() ?? "N/A";
-    String qrData = item['qr_code_url'] ?? "";
+    final itemName = item['name'] ?? "Unknown Item";
+    final category = item['category'] ?? "Unknown Category";
+    final quantity = item['quantity']?.toString() ?? "N/A";
+    final expirationDate = item['expiration_date']?.toString() ?? "N/A";
+    final qrData = item['qr_code_url'] ?? "";
 
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.9),
+        child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.all(16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Item Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text("Item Details",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 16),
                 _buildDetailRow("Name:", itemName),
                 _buildDetailRow("Category:", category),
@@ -294,11 +297,19 @@ class InventoryScreen extends StatelessWidget {
                 Center(
                   child: Screenshot(
                     controller: screenshotController,
-                    child: QrImageView(
-                      data: qrData,
-                      size: 150,
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
+                    child: Image.network(
+                      qrData,
+                      height: 200,
+                      width: 200,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, progress) {
+                        return progress == null
+                            ? child
+                            : CircularProgressIndicator();
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(Icons.broken_image, size: 200, color: Colors.red);
+                      },
                     ),
                   ),
                 ),
@@ -335,7 +346,7 @@ class InventoryScreen extends StatelessWidget {
         children: [
           Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
           SizedBox(width: 8),
-          Text(value),
+          Flexible(child: Text(value)),
         ],
       ),
     );
