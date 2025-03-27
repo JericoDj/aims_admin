@@ -82,8 +82,12 @@ class InventoryScreen extends StatelessWidget {
       final rawName = itemName;
       final sanitized = rawName
           .replaceAll(RegExp(r'[^\w\\s-]'), '')
-          .replaceAll(' ', '_')
-          .substring(0, min(rawName.length, 50));
+          .replaceAll(' ', '_');
+
+// Safe substring logic
+      final sanitizedFileName = sanitized.isNotEmpty
+          ? sanitized.substring(0, min(sanitized.length, 50))
+          : '';
 
       // Capture the widget as image bytes
       final rawImage = await screenshotController.captureFromWidget(

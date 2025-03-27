@@ -63,6 +63,7 @@ dependencies:
   googleapis_auth: ^1.6.0
 
   flutter_local_notifications: ^18.0.1
+  smooth_page_indicator: ^1.2.1
 
 
 
@@ -78,6 +79,8 @@ dependencies:
   saver_gallery: ^4.0.1
   external_path: ^2.2.0
   device_info_plus: ^11.3.3
+
+
 
 
 

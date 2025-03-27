@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../api/firebase_api.dart';
 import '../../utils/colors.dart';
@@ -38,6 +39,15 @@ class _HomeScreenState extends State<HomeScreen> {
   DocumentSnapshot? lastNotification;
 
 
+  final PageController _pageController = PageController();
+  final List<String> images = [
+    // Replace these with your actual image paths
+    'assets/image1.png',
+    'assets/image2.png',
+    'assets/image3.png',
+  ];
+
+
 
 
   @override
@@ -46,6 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _initFirebaseNotifications();
     _fetchNotifications();
   }
+
+
 
 
 
@@ -199,9 +211,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   SizedBox(height: 30),
-                  Text(
-                    "Version: ${AppVersion.version} (Build: ${AppVersion.build})",
-                    style: TextStyle(color: Colors.black, fontSize: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Version: 2.0.0 (Build: 1.0.0)",
+                        style: TextStyle(color: Colors.black, fontSize: 16),
+                      ),
+                      // Info icon next to version text
+                      IconButton(
+                        icon: Icon(Icons.info_outline),
+                        onPressed: () => _showTutorialDialog(context),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -212,6 +234,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+
+
 
   Widget _buildAppBar() {
     return Container(
@@ -457,6 +482,65 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // Show the tutorial dialog with images and page indicator
+  void _showTutorialDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // PageView for images
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: images.length,
+                      itemBuilder: (context, index) {
+                        return Image.asset(
+                          images[index],
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    ),
+                  ),
+                  // Page indicator to show current page
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: SmoothPageIndicator(
+                      controller: _pageController,
+                      count: images.length,
+                      effect: ExpandingDotsEffect(
+                        dotWidth: 8,
+                        dotHeight: 8,
+                        dotColor: Colors.grey,
+                        activeDotColor: Colors.blue,
+                      ),
+                    ),
+                  ),
+                  // Close button (X) to exit the dialog
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Get.back(),
+                    color: Colors.red,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
 
 
