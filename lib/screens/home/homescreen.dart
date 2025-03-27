@@ -379,25 +379,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       return _buildLoadMoreButton();
                     }
                     final data = notificationDocs[index];
+                    final docData = data.data() as Map<String, dynamic>? ?? {}; // Add null check
+
                     return ListTile(
                       leading: Icon(Icons.history, color: MyColors.orange),
                       title: Text(
-                        data["Item Name"],
+                        docData["Item Name"]?.toString() ?? "No Item Name", // Safe access
                         style: TextStyle(
                             color: MyColors.red, fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        "${data["Action"]}: ${data["Quantity"]} (${data["Category"]})",
+                        "${docData["Action"]?.toString() ?? "Action"}: " // Modified line
+                            "${docData["Quantity"]?.toString() ?? "N/A"} " // Safe access
+                            "(${docData["Category"]?.toString() ?? "Uncategorized"})", // Safe access
                       ),
                       trailing: Text(
-                        _formatTimestamp(data["Date Updated"]),
+                        _formatTimestamp(docData["Date Updated"]),
                         style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                       onTap: () {
-                        final historyData = data.data() as Map<String, dynamic>?;
-                        if (historyData != null) {
-                          _showHistoryDetailsDialog(historyData);
-                        }
+                        _showHistoryDetailsDialog(docData);
                       },
                     );
                   },
@@ -433,9 +434,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                          entry.key == "Date Updated"
+                          (entry.key == "Date Updated"
                               ? _formatTimestamp(entry.value)
-                              : entry.value.toString(),
+                              : entry.value?.toString() ?? "N/A"), // Add null check
                           style: TextStyle(color: Colors.black)),
                     ),
                   ],

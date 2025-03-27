@@ -268,18 +268,31 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         return;
       }
 
-      // Get existing quantity
-      int existingQuantity = int.tryParse(itemSnapshot['quantity']?.toString() ?? '0') ?? 0;
+      // Improved quantity handling
+      final existingData = itemSnapshot.data() as Map<String, dynamic>? ?? {};
+      int existingQuantity = (existingData['quantity'] is num)
+          ? (existingData['quantity'] as num).toInt()
+          : int.tryParse(existingData['quantity']?.toString() ?? '0') ?? 0;
+
       int updatedQuantity = existingQuantity + newQuantity;
+
+      // Debug prints
+      print("🔄 Quantity Update:");
+      print("└ Existing: $existingQuantity");
+      print("└ Added: $newQuantity");
+      print("└ New Total: $updatedQuantity");
 
       // Build update map
       Map<String, dynamic> updateData = {
-        'quantity': updatedQuantity.toString(),
+        'quantity': updatedQuantity,  // Store as number instead of string
       };
 
       if (expirationDate.isNotEmpty) {
         updateData['expiration_date'] = expirationDate;
       }
+
+      // Update Firestore with merged data
+      await itemRef.update(updateData);  // Changed to update() instead of set()
 
       // Update Firestore with merged data
       await itemRef.set(updateData, SetOptions(merge: true));
