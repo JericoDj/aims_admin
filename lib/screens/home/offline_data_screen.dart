@@ -22,6 +22,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   final LocalServer _localServer = LocalServer(); // Initialize Server
   List<Map<String, dynamic>> _offlineData = [];
+
   final RxBool _isServerRunning = false.obs;
   final RxString _serverIp = ''.obs;
 
@@ -66,12 +67,14 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
       _offlineData = data;
     });
   }
-
   void _stopServer() async {
     if (_localServer.isServerRunning()) {
       await _localServer.stopServer();
+
+      // ✅ Update observable state so the UI hides the running server message
       _isServerRunning.value = false;
       _serverIp.value = '';
+
       Get.snackbar("Success", "Server stopped successfully",
           backgroundColor: Colors.orange, colorText: Colors.white);
     } else {
@@ -80,11 +83,11 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
     }
   }
 
-
+  /// 🚀 Start Local Network Server
   /// 🚀 Start Local Network Server
   void _startServer() async {
     try {
-      if (_isServerRunning.value) {
+      if (_localServer.isServerRunning()) {
         Get.snackbar("Info", "Server is already running.",
             backgroundColor: Colors.blue, colorText: Colors.white);
         return;
@@ -102,8 +105,11 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
 
       await _localServer.startServer();
 
-      _isServerRunning.value = true;
-      _serverIp.value = ip;
+      // ✅ Make sure the reactive state is updated so UI shows server status
+      setState(() {
+        _isServerRunning.value = true;
+        _serverIp.value = ip;
+      });
 
       Get.snackbar(
         "Server Started",
@@ -111,6 +117,8 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
+
+      print('✅ Server started at: http://$ip:8080');
     } catch (e) {
       _isServerRunning.value = false;
       _serverIp.value = '';
@@ -118,6 +126,8 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
           backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
+
+
 
 
   /// ✅ Add New Data to Offline Database
@@ -611,8 +621,8 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
 
 
   Widget _buildGridButton({
-    required IconData icon,
     required String label,
+    required IconData icon,
     required Color color,
     required VoidCallback onTap,
   }) {
@@ -620,38 +630,32 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
+
           color: color,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(5),
         ),
-        padding: EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white),
-            SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-
 
 
 
@@ -673,51 +677,12 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
       ),
       body: Column(
         children: [
-          SizedBox(
-            height: 250,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 3, // Adjust this for button height
-                physics: NeverScrollableScrollPhysics(), // Prevent scroll
-                children: [
-                  _buildGridButton(
-                    icon: Icons.add,
-                    label: "Add New Data",
-                    color: MyColors.orange,
-                    onTap: _showAddDataDialog,
-                  ),
-                  _buildGridButton(
-                    icon: Icons.stop_circle,
-                    label: "Stop Server",
-                    color: MyColors.red,
-                    onTap: _stopServer,
-                  ),
-                  _buildGridButton(
-                    icon: Icons.cloud_upload,
-                    label: "Upload to Online",
-                    color: MyColors.orange,
-                    onTap: _uploadToOnline,
-                  ),
-                  _buildGridButton(
-                    icon: Icons.wifi_tethering,
-                    label: "Start Local Server",
-                    color: MyColors.red,
-                    onTap: _startServer,
-                  ),
-                ],
-              ),
-            ),
-          ),
 
 
           Obx(() => _isServerRunning.value
               ? Container(
             padding: EdgeInsets.all(12),
-            margin: EdgeInsets.all(10),
+            margin: EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -740,7 +705,177 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
           )
               : SizedBox.shrink()),
 
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical:20),
+            child: GridView.count(
+              shrinkWrap: true,
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 2.5,
+              physics: NeverScrollableScrollPhysics(),
+              children: [
+                _buildGridButton(
+                  label: "Add New Data",
+                  icon: Icons.add,
+                  color: MyColors.orange,
+                  onTap: _showAddDataDialog,
+                ),
+                _buildGridButton(
+                  label: "Stop Server",
+                  icon: Icons.stop_circle,
+                  color: MyColors.red,
+                  onTap: _stopServer,
+                ),
+                _buildGridButton(
+                  label: "Upload to Online",
+                  icon: Icons.cloud_upload,
+                  color: MyColors.orange,
+                  onTap: () async {
+                    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+                    final localData = await _databaseHelper.getAllData();
 
+                    List<Map<String, dynamic>> matched = [];
+                    List<Map<String, dynamic>> unmatched = [];
+
+                    for (var item in localData) {
+                      final querySnapshot = await firestore
+                          .collection('stock')
+                          .doc('Medical_Equipments')
+                          .collection('items')
+                          .where('item_name', isEqualTo: item['itemName'])
+                          .where('serial_no', isEqualTo: item['serialNo'])
+                          .where('brand', isEqualTo: item['brand'])
+                          .where('storage_code', isEqualTo: item['storageCode'])
+                          .where('expiration_date', isEqualTo: item['expirationDate'])
+                          .get();
+
+                      if (querySnapshot.docs.isNotEmpty) {
+                        matched.add({...item, 'docId': querySnapshot.docs.first.id});
+
+                        print("✅ MATCHED:");
+                        print("📦 item_name: ${item['itemName']}");
+                        print("🔢 serial_no: ${item['serialNo']}");
+                        print("🏷️ brand: ${item['brand']}");
+                        print("📦 storage_code: ${item['storageCode']}");
+                        print("🗓️ expiration_date: ${item['expirationDate']}");
+                        print("📦 quantity: ${item['quantity']}");
+                        print("📄 Firestore Doc ID: ${querySnapshot.docs.first.id}");
+                        print("--------------");
+                      } else {
+                        unmatched.add(item);
+                        print("⚠️ UNMATCHED: ${item['itemName']} (${item['serialNo']})");
+                      }
+                    }
+
+                    if (matched.isEmpty && unmatched.isEmpty) {
+                      Get.snackbar("Info", "No local data found.", backgroundColor: Colors.grey);
+                      return;
+                    }
+
+                    Get.bottomSheet(
+                      Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                        ),
+                        height: 500,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Matched Items", style: TextStyle(fontWeight: FontWeight.bold)),
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: matched.length,
+                                itemBuilder: (context, index) {
+                                  final item = matched[index];
+                                  return ListTile(
+                                    title: Text(item['itemName']),
+                                    subtitle: Text("Qty: ${item['quantity']} | Serial: ${item['serialNo']}"),
+                                    trailing: ElevatedButton(
+                                      onPressed: () async {
+                                        try {
+                                          final existingQty = item['quantity'];
+                                          final docId = item['docId'];
+
+                                          final doc = await firestore
+                                              .collection('stock')
+                                              .doc('Medical_Equipments')
+                                              .collection('items')
+                                              .doc(docId)
+                                              .get();
+
+                                          if (!doc.exists) {
+                                            print("❌ Document does not exist: $docId");
+                                            Get.snackbar("Error", "Document not found in Firestore.",
+                                                backgroundColor: Colors.red, colorText: Colors.white);
+                                            return;
+                                          }
+
+                                          final prevQty = int.tryParse(doc['quantity'].toString()) ?? 0;
+
+                                          await firestore
+                                              .collection('stock')
+                                              .doc('Medical_Equipments')
+                                              .collection('items')
+                                              .doc(docId)
+                                              .update({
+                                            'quantity': prevQty + existingQty,
+                                            'expiration_date': item['expirationDate'],
+                                          });
+
+                                          await _databaseHelper.deleteDataById(item['id']);
+                                          matched.removeAt(index);
+                                          _offlineData.removeWhere((e) => e['id'] == item['id']);
+                                          setState(() {});
+
+                                          Get.snackbar("Uploaded", "${item['itemName']} uploaded successfully",
+                                              backgroundColor: Colors.orange, colorText: Colors.white);
+                                          Get.back();
+                                        } catch (e) {
+                                          print("❌ Upload error: $e");
+                                          Get.snackbar("Error", "Failed to upload item: ${e.toString()}",
+                                              backgroundColor: Colors.red, colorText: Colors.white);
+                                        }
+                                      },
+                                      child: Text("Upload"),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            Divider(),
+                            Text("Unmatched Items", style: TextStyle(fontWeight: FontWeight.bold)),
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: unmatched.length,
+                                itemBuilder: (context, index) {
+                                  final item = unmatched[index];
+                                  return ListTile(
+                                    title: Text(item['itemName']),
+                                    subtitle: Text("Qty: ${item['quantity']} | Serial: ${item['serialNo']}"),
+                                    trailing: Icon(Icons.warning, color: Colors.orange),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      isScrollControlled: true,
+                    );
+                  },
+                ),
+                _buildGridButton(
+                  label: "Start Server",
+                  icon: Icons.wifi_tethering,
+                  color: MyColors.red,
+                  onTap: _startServer,
+                ),
+              ],
+            ),
+          ),
 
           // ✅ Display Offline Data
           // ✅ Display Offline Data
@@ -775,7 +910,5 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
         ],
       ),
     );
-
-
   }
 }
