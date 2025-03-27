@@ -130,9 +130,9 @@ class InventoryScreen extends StatelessWidget {
       // Decode → Rotate → Flip
       final decoded = img.decodeImage(rawImage);
       if (decoded == null) throw Exception("Failed to decode image");
-      final rotated = img.copyRotate(decoded, angle: 180);
-      final flipped = img.flipHorizontal(rotated);
-      final finalBytes = Uint8List.fromList(img.encodePng(flipped));
+      // final rotated = img.copyRotate(decoded, angle: 180);
+      // final flipped = img.flipHorizontal(rotated);
+      final finalBytes = Uint8List.fromList(img.encodePng(decoded));
 
       final result = await SaverGallery.saveImage(
         finalBytes,

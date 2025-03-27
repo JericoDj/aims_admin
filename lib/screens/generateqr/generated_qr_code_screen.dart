@@ -80,14 +80,14 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
       final decoded = img.decodeImage(rawImage);
       if (decoded == null) throw Exception("Image decode failed");
 
-// Rotate 180 degrees
-      final rotated = img.copyRotate(decoded, angle: 180);
-
-// Flip horizontally to undo mirror effect
-      final flipped = img.flipHorizontal(rotated);
+// // Rotate 180 degrees
+//       final rotated = img.copyRotate(decoded, angle: 180);
+//
+// // Flip horizontally to undo mirror effect
+//       final flipped = img.flipHorizontal(rotated);
 
 // Encode as PNG
-      final finalBytes = Uint8List.fromList(img.encodePng(flipped));
+      final finalBytes = Uint8List.fromList(img.encodePng(decoded));
 
       final result = await SaverGallery.saveImage(
         finalBytes,
