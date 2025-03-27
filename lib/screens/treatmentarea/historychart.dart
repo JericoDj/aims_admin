@@ -29,15 +29,26 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
 
       Map<String, List<int>> usageData = {};
       List<Map<String, dynamic>> usageList = [];
-      Set<String> uniqueCategories = {}; // ✅ Track unique categories to prevent duplicates
+      Set<String> uniqueCategories = {};
 
       for (var doc in snapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
         String category = data["Category"] ?? "Uncategorized";
-        int quantity = int.tryParse(data["Quantity"].toString()) ?? 0;
         String itemName = data["Item Name"] ?? "Unknown";
         String action = data["Action"] ?? "Unknown";
+        // Handle different quantity fields based on action
+        // Fixed quantity parsing
+        int quantity = 0;
+        if (action == "Add Stock") {
+          quantity = (data["Quantity Added"] is num)
+              ? (data["Quantity Added"] as num).toInt()
+              : int.tryParse(data["Quantity Added"]?.toString() ?? '0') ?? 0;
+        } else {
+          quantity = (data["Quantity"] is num)
+              ? (data["Quantity"] as num).toInt()
+              : int.tryParse(data["Quantity"]?.toString() ?? '0') ?? 0;
+        }
 
         // ✅ Ensure correct date field is used
         String date = action == "Generate QR Code"
@@ -69,8 +80,6 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
       setState(() {
         categoryUsageData = usageData;
         recentUsage = usageList;
-
-        // ✅ Ensure "All" is added only once at the start
         categories = ["All", ...uniqueCategories.toList()];
       });
     } catch (e) {
@@ -186,13 +195,7 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
                 itemCount: recentUsage.length,
                 itemBuilder: (context, index) {
                   var item = recentUsage[index];
-                  return _buildMedicineItem(
-                    item["Item Name"],
-                    item["Quantity"], // ✅ Used "Quantity" instead of "Stock"
-                    item["Category"],
-                    item["Action"],
-                    item["Date"],
-                  );
+                  return _buildMedicineItem(item); // Pass full item map
                 },
               ),
             ),
@@ -221,8 +224,8 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
     });
   }
 
-  /// **Build Medicine Usage Item**
-  Widget _buildMedicineItem(String name, String quantity, String category, String action, String date) {
+  // Updated _buildMedicineItem to handle full item data
+  Widget _buildMedicineItem(Map<String, dynamic> item) {
     return Card(
       margin: EdgeInsets.symmetric(vertical: 5),
       shape: RoundedRectangleBorder(
@@ -230,9 +233,73 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
         side: BorderSide(color: MyColors.red, width: 1),
       ),
       child: ListTile(
-        title: Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("Quantity: $quantity | Category: $category\nAction: $action | Date: $date"),
+        title: Text(item["Item Name"], style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item["Action"] == "Add Stock"
+                  ? "Quantity Added: ${item["Quantity Added"] ?? item["Quantity"]}"
+                  : "Quantity: ${item["Quantity"]}",
+              style: TextStyle(color: MyColors.red),
+            ),
+            Text("Category: ${item["Category"]}"),
+            Text("Action: ${item["Action"]}"),
+            Text("Date: ${item["Date"]}"),
+          ],
+        ),
         trailing: Icon(Icons.history, color: MyColors.red),
+        onTap: () => _showItemDetailsDialog(item),
+      ),
+    );
+  }
+
+// New dialog showing detailed information
+  void _showItemDetailsDialog(Map<String, dynamic> item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Item Details",
+            style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow("Item Name:", item["Item Name"]),
+              _buildDetailRow("Action:", item["Action"]),
+              _buildDetailRow("Category:", item["Category"]),
+              if (item["Action"] == "Add Stock") ...[
+                _buildDetailRow("Quantity Added:", item["Quantity Added"]),
+                _buildDetailRow("New Total:", item["New Total"]),
+              ],
+              _buildDetailRow("Date:", item["Date"]),
+              if (item.containsKey("Notes"))
+                _buildDetailRow("Notes:", item["Notes"]),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text("Close", style: TextStyle(color: MyColors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Reusable detail row widget
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red)),
+          SizedBox(width: 8),
+          Expanded(child: Text(value, style: TextStyle(color: Colors.black))),
+        ],
       ),
     );
   }
