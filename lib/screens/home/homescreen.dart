@@ -42,9 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController();
   final List<String> images = [
     // Replace these with your actual image paths
-    'assets/image1.png',
-    'assets/image2.png',
-    'assets/image3.png',
+    'assets/images/tutorial/aims.png',
+    'assets/images/tutorial/aims2.png',
+    'assets/images/tutorial/aims3.png',
   ];
 
 
