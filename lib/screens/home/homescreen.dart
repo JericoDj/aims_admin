@@ -545,8 +545,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // Show the tutorial dialog with images and page indicator
   void _showTutorialDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -556,54 +554,64 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.8,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // PageView for images
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: images.length,
-                      itemBuilder: (context, index) {
-                        return Image.asset(
-                          images[index],
-                          fit: BoxFit.cover,
-                        );
-                      },
-                    ),
-                  ),
-                  // Page indicator to show current page
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: SmoothPageIndicator(
-                      controller: _pageController,
-                      count: images.length,
-                      effect: ExpandingDotsEffect(
-                        dotWidth: 8,
-                        dotHeight: 8,
-                        dotColor: Colors.grey,
-                        activeDotColor: Colors.blue,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10,50,10,20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // PageView for images
+                      Expanded(
+                        child: PageView.builder(
+                          controller: _pageController,
+                          itemCount: images.length,
+                          itemBuilder: (context, index) {
+                            return Image.asset(
+                              images[index],
+                              fit: BoxFit.contain,
+                            );
+                          },
+                        ),
                       ),
-                    ),
+                      // Page indicator to show current page
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: SmoothPageIndicator(
+                          controller: _pageController,
+                          count: images.length,
+                          effect: ExpandingDotsEffect(
+                            dotWidth: 8,
+                            dotHeight: 8,
+                            dotColor: Colors.grey,
+                            activeDotColor: MyColors.red,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  // Close button (X) to exit the dialog
-                  IconButton(
-                    icon: Icon(Icons.close),
+                ),
+                // Close button positioned top right
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: IconButton(
+                    icon: Icon(Icons.close, color: MyColors.red),
+                    iconSize: 28,
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(),
                     onPressed: () => Get.back(),
-                    color: Colors.red,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
       },
     );
   }
-
 
 
 

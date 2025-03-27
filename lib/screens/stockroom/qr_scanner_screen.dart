@@ -157,7 +157,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           ),
           title: Center(
             child: Text(
-              "Edit Item Details",
+              "Add Item Quanity",
               style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red, fontSize: 24),
             ),
           ),
@@ -230,21 +230,27 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     String itemName = scannedItem['item_name'] ?? "";
     String category = scannedItem['category'] ?? "";
-    String updatedQuantity = quantityController.text.trim();
+    String newQuantityInput = quantityController.text.trim();
     String expirationDate = expirationController.text.trim();
-    String dateUpdated = DateTime.now().toIso8601String(); // Capture timestamp
+    String dateUpdated = DateTime.now().toIso8601String();
 
-    // Ensure category and item name use underscores instead of spaces
+    // Sanitize names for Firestore path
     category = category.replaceAll(" ", "_").replaceAll(":", "_");
     itemName = itemName.replaceAll(" ", "_").replaceAll(":", "_");
 
-    if (itemName.isEmpty || category.isEmpty) {
-      print("❌ Error: Missing item name or category. Cannot update Firestore.");
-      Get.snackbar("Error", "Missing item name or category", backgroundColor: Colors.red, colorText: Colors.white);
+    if (itemName.isEmpty || category.isEmpty || newQuantityInput.isEmpty) {
+      Get.snackbar("Error", "Item name, category, or quantity is missing",
+          backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
 
-    // Print document path for debugging
+    int newQuantity = int.tryParse(newQuantityInput) ?? 0;
+    if (newQuantity <= 0) {
+      Get.snackbar("Error", "Quantity must be a positive number",
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
     print("📌 Firestore Path: stock/$category/items/$itemName");
 
     try {
@@ -254,51 +260,67 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           .collection('items')
           .doc(itemName);
 
-      // ✅ Check if item exists before updating
       DocumentSnapshot itemSnapshot = await itemRef.get();
+
       if (!itemSnapshot.exists) {
-        print("❌ Error: Item does not exist in DataBase.");
-        Get.snackbar("Error", "Item does not exist in Firestore", backgroundColor: Colors.red, colorText: Colors.white);
+        Get.snackbar("Error", "Item does not exist in Firestore",
+            backgroundColor: Colors.red, colorText: Colors.white);
         return;
       }
 
-      await itemRef.set({
-        'quantity': updatedQuantity,
-        'expiration_date': expirationDate,
-      }, SetOptions(merge: true)); // Prevents overwriting existing data
+      // Get existing quantity
+      int existingQuantity = int.tryParse(itemSnapshot['quantity']?.toString() ?? '0') ?? 0;
+      int updatedQuantity = existingQuantity + newQuantity;
+
+      // Build update map
+      Map<String, dynamic> updateData = {
+        'quantity': updatedQuantity.toString(),
+      };
+
+      if (expirationDate.isNotEmpty) {
+        updateData['expiration_date'] = expirationDate;
+      }
+
+      // Update Firestore with merged data
+      await itemRef.set(updateData, SetOptions(merge: true));
 
       setState(() {
-        scannedItem['quantity'] = updatedQuantity;
-        scannedItem['expiration_date'] = expirationDate;
+        scannedItem['quantity'] = updatedQuantity.toString();
+        if (expirationDate.isNotEmpty) {
+          scannedItem['expiration_date'] = expirationDate;
+        }
       });
 
-      print("✅ Firestore Updated Successfully in $category -> $itemName!");
+      print("✅ Quantity Added: $newQuantity → Total: $updatedQuantity");
 
-      // ✅ Save update history in Firestore
+      // Save to history
       await FirebaseFirestore.instance.collection("history").add({
         "Item Name": scannedItem['item_name'] ?? "Unknown",
-        "Quantity": updatedQuantity,
-        "Category": scannedItem['category'] ?? "Unknown", // ✅ Added Category
-        "Action": "Update Stock",
+        "Quantity Added": newQuantity.toString(),
+        "New Total": updatedQuantity.toString(),
+        "Category": scannedItem['category'] ?? "Unknown",
+        "Action": "Add Stock",
         "Date Updated": dateUpdated,
       });
 
-      print("✅ Update history saved!");
+      print("✅ History saved.");
 
-      // ✅ Send notification to all users
-      NotificationController notificationController = Get.find(); // Get the notification controller
+      // Send notification
+      NotificationController notificationController = Get.find();
       await notificationController.sendNotificationToAllUsers(
-          "Stock Updated: $itemName",
-          "Quantity: $updatedQuantity, Expiration: $expirationDate"
+          "Stock Added: $itemName",
+          "Added $newQuantity → Total: $updatedQuantity"
       );
 
-      print("📢 Notification sent successfully!");
+      print("📢 Notification sent!");
 
     } catch (e) {
       print("❌ Firestore Update Error: $e");
-      Get.snackbar("Error", "Failed to update item: $e", backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar("Error", "Failed to update item: $e",
+          backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
+
 
 
 
