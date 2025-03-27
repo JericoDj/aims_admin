@@ -75,6 +75,10 @@ dependencies:
   shelf_router: ^1.1.4
 
 
+  flutter_background_service: ^5.1.0
+  flutter_background_service_android: ^6.3.0
+
+
 
 
 dev_dependencies:

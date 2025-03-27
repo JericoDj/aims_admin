@@ -46,11 +46,17 @@ class LocalServer {
     };
 
     try {
-      _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 8080);
+      // Pass shared: true to allow binding multiple times to the same address/port combination.
+      _server = await shelf_io.serve(
+        handler,
+        InternetAddress.anyIPv4,
+        8080,
+        shared: true,
+      );
       final serverIp = _server!.address.address;
       final port = _server!.port;
 
-      // ✅ Save server IP to local storage
+      // Save server IP to local storage
       await LocalStorage.saveServerIp(serverIp);
 
       print('✅ Server started at: http://$serverIp:$port');
@@ -59,7 +65,6 @@ class LocalServer {
       rethrow;
     }
   }
-
 
   Future<Response> _handleItems(Request request, Map<String, String> headers) async {
     switch (request.method) {
@@ -88,9 +93,10 @@ class LocalServer {
   Future<Response> _handleSingleItem(
       Request request,
       Map<String, String> headers,
-      int? id
+      int? id,
       ) async {
-    if (id == null) return Response(HttpStatus.badRequest, body: 'Invalid ID', headers: headers);
+    if (id == null)
+      return Response(HttpStatus.badRequest, body: 'Invalid ID', headers: headers);
 
     switch (request.method) {
       case 'GET':

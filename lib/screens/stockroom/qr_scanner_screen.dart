@@ -22,6 +22,15 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   TextEditingController quantityController = TextEditingController();
   TextEditingController expirationController = TextEditingController();
 
+
+
+  @override
+  void dispose() {
+    scannerController.stop();
+    scannerController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(

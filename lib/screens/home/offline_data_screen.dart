@@ -22,6 +22,8 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   final LocalServer _localServer = LocalServer(); // Initialize Server
   List<Map<String, dynamic>> _offlineData = [];
+  final RxBool _isServerRunning = false.obs;
+  final RxString _serverIp = ''.obs;
 
 
   // ✅ Controllers for Adding and Editing Data
@@ -68,6 +70,8 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
   void _stopServer() async {
     if (_localServer.isServerRunning()) {
       await _localServer.stopServer();
+      _isServerRunning.value = false;
+      _serverIp.value = '';
       Get.snackbar("Success", "Server stopped successfully",
           backgroundColor: Colors.orange, colorText: Colors.white);
     } else {
@@ -76,45 +80,44 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
     }
   }
 
-  /// 🚀 Start Local Network Server
+
   /// 🚀 Start Local Network Server
   void _startServer() async {
     try {
-      // Check if the server is already running
-      if (_localServer.isServerRunning()) {
+      if (_isServerRunning.value) {
         Get.snackbar("Info", "Server is already running.",
             backgroundColor: Colors.blue, colorText: Colors.white);
-        return; // Exit if the server is already running
+        return;
       }
 
-      // Fetch the network interface and the device's local IP
       final interfaces = await NetworkInterface.list();
       final wifiInterface = interfaces.firstWhere(
             (interface) => interface.name == 'wlan0' || interface.name == 'en0',
-        orElse: () => interfaces.first, // Fallback if interface name differs
+        orElse: () => interfaces.first,
       );
 
-      final serverIp = wifiInterface.addresses
+      final ip = wifiInterface.addresses
           .firstWhere((addr) => addr.type == InternetAddressType.IPv4)
           .address;
 
-      // Start the server if it's not already running
       await _localServer.startServer();
+
+      _isServerRunning.value = true;
+      _serverIp.value = ip;
 
       Get.snackbar(
         "Server Started",
-        "Connect to IP: $serverIp:8080",
+        "Connect to IP: $ip:8080",
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
-
-      print('✅ Server started at: http://$serverIp:8080');
     } catch (e) {
+      _isServerRunning.value = false;
+      _serverIp.value = '';
       Get.snackbar("Error", "Failed to start server: $e",
           backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
-
 
 
   /// ✅ Add New Data to Offline Database
@@ -607,6 +610,48 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
   }
 
 
+  Widget _buildGridButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white),
+            SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
 
 
@@ -628,261 +673,73 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
       ),
       body: Column(
         children: [
-
-          // ✅ Add New Data Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
-            child: GestureDetector(
-              onTap: _showAddDataDialog,
-              child: Container(
-                margin: EdgeInsets.only(top: 15),
-                padding: EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: MyColors.orange,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
-                      "Add New Data",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 🚫 Stop Server Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
-            child: GestureDetector(
-              onTap: _stopServer,
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: MyColors.red,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.stop_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
-                      "Stop Server",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-// 🚀 Start Local Network Server Button
-
-
-
-          // ☁️ Upload to Online Button (Updated)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
-            child: GestureDetector(
-              onTap: () async {
-                final FirebaseFirestore firestore = FirebaseFirestore.instance;
-                final localData = await _databaseHelper.getAllData();
-
-                List<Map<String, dynamic>> matched = [];
-                List<Map<String, dynamic>> unmatched = [];
-
-                for (var item in localData) {
-                  final querySnapshot = await firestore
-                      .collection('stock')
-                      .doc('Medical_Equipments')
-                      .collection('items')
-                      .where('item_name', isEqualTo: item['itemName'])
-                      .where('serial_no', isEqualTo: item['serialNo'])
-                      .where('brand', isEqualTo: item['brand'])
-                      .where('storage_code', isEqualTo: item['storageCode'])
-                      .where('expiration_date', isEqualTo: item['expirationDate'])
-                      .get();
-
-                  if (querySnapshot.docs.isNotEmpty) {
-                    matched.add({...item, 'docId': querySnapshot.docs.first.id});
-
-                    print("✅ MATCHED:");
-                    print("📦 item_name: ${item['itemName']}");
-                    print("🔢 serial_no: ${item['serialNo']}");
-                    print("🏷️ brand: ${item['brand']}");
-                    print("📦 storage_code: ${item['storageCode']}");
-                    print("🗓️ expiration_date: ${item['expirationDate']}");
-                    print("📦 quantity: ${item['quantity']}");
-                    print("📄 Firestore Doc ID: ${querySnapshot.docs.first.id}");
-                    print("--------------");
-                  } else {
-                    unmatched.add(item);
-                    print("⚠️ UNMATCHED: ${item['itemName']} (${item['serialNo']})");
-                  }
-                }
-
-                if (matched.isEmpty && unmatched.isEmpty) {
-                  Get.snackbar("Info", "No local data found.", backgroundColor: Colors.grey);
-                  return;
-                }
-
-                Get.bottomSheet(
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    height: 500,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Matched Items", style: TextStyle(fontWeight: FontWeight.bold)),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: matched.length,
-                            itemBuilder: (context, index) {
-                              final item = matched[index];
-                              return ListTile(
-                                title: Text(item['itemName']),
-                                subtitle: Text("Qty: ${item['quantity']} | Serial: ${item['serialNo']}"),
-                                trailing: ElevatedButton(
-                                  onPressed: () async {
-                                    try {
-                                      final existingQty = item['quantity'];
-                                      final docId = item['docId'];
-
-                                      final doc = await firestore
-                                          .collection('stock')
-                                          .doc('Medical_Equipments')
-                                          .collection('items')
-                                          .doc(docId)
-                                          .get();
-
-                                      if (!doc.exists) {
-                                        print("❌ Document does not exist: $docId");
-                                        Get.snackbar("Error", "Document not found in Firestore.",
-                                            backgroundColor: Colors.red, colorText: Colors.white);
-                                        return;
-                                      }
-
-                                      final prevQty = int.tryParse(doc['quantity'].toString()) ?? 0;
-
-                                      await firestore
-                                          .collection('stock')
-                                          .doc('Medical_Equipments')
-                                          .collection('items')
-                                          .doc(docId)
-                                          .update({
-                                        'quantity': prevQty + existingQty,
-                                        'expiration_date': item['expirationDate'],
-                                      });
-
-                                      await _databaseHelper.deleteDataById(item['id']);
-                                      matched.removeAt(index);
-                                      _offlineData.removeWhere((e) => e['id'] == item['id']);
-                                      setState(() {});
-
-                                      Get.snackbar("Uploaded", "${item['itemName']} uploaded successfully",
-                                          backgroundColor: Colors.orange, colorText: Colors.white);
-                                      Get.back();
-                                    } catch (e) {
-                                      print("❌ Upload error: $e");
-                                      Get.snackbar("Error", "Failed to upload item: ${e.toString()}",
-                                          backgroundColor: Colors.red, colorText: Colors.white);
-                                    }
-                                  },
-                                  child: Text("Upload"),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        Divider(),
-                        Text("Unmatched Items", style: TextStyle(fontWeight: FontWeight.bold)),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: unmatched.length,
-                            itemBuilder: (context, index) {
-                              final item = unmatched[index];
-                              return ListTile(
-                                title: Text(item['itemName']),
-                                subtitle: Text("Qty: ${item['quantity']} | Serial: ${item['serialNo']}"),
-                                trailing: Icon(Icons.warning, color: Colors.orange),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+          SizedBox(
+            height: 250,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 3, // Adjust this for button height
+                physics: NeverScrollableScrollPhysics(), // Prevent scroll
+                children: [
+                  _buildGridButton(
+                    icon: Icons.add,
+                    label: "Add New Data",
+                    color: MyColors.orange,
+                    onTap: _showAddDataDialog,
                   ),
-                  isScrollControlled: true,
-                );
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: MyColors.orange,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.cloud_upload, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
-                      "Upload to Online",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+                  _buildGridButton(
+                    icon: Icons.stop_circle,
+                    label: "Stop Server",
+                    color: MyColors.red,
+                    onTap: _stopServer,
+                  ),
+                  _buildGridButton(
+                    icon: Icons.cloud_upload,
+                    label: "Upload to Online",
+                    color: MyColors.orange,
+                    onTap: _uploadToOnline,
+                  ),
+                  _buildGridButton(
+                    icon: Icons.wifi_tethering,
+                    label: "Start Local Server",
+                    color: MyColors.red,
+                    onTap: _startServer,
+                  ),
+                ],
               ),
             ),
           ),
 
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 100.0, vertical: 10),
-            child: GestureDetector(
-              onTap: _startServer,
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: MyColors.red, // You can change this to MyColors.green if defined
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.wifi_tethering, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
-                      "Start Local Network Server",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          Obx(() => _isServerRunning.value
+              ? Container(
+            padding: EdgeInsets.all(12),
+            margin: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green),
             ),
-          ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 10),
+                Text(
+                  "Server running at: ${_serverIp.value}:8080",
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          )
+              : SizedBox.shrink()),
+
 
 
           // ✅ Display Offline Data
@@ -918,5 +775,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
         ],
       ),
     );
+
+
   }
 }

@@ -31,6 +31,12 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
   TextEditingController usedQuantityController = TextEditingController(); // Input field for used items
 
   @override
+  void dispose() {
+    scannerController.stop();
+    scannerController.dispose();
+    super.dispose();
+  }
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
