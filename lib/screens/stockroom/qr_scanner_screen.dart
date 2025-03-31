@@ -135,10 +135,20 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   Map<String, String> _parseScannedData(String data) {
     Map<String, String> parsedData = {};
     List<String> lines = data.split("\n");
+
+    // Required fields check
+    bool hasRequiredFields = lines.any((line) => line.startsWith("brand:"));
+
+    if (!hasRequiredFields) {
+      Get.snackbar("Invalid QR", "Missing brand information",
+          backgroundColor: Colors.red);
+      throw FormatException("Brand field is required");
+    }
+
     for (String line in lines) {
       List<String> parts = line.split(":");
       if (parts.length >= 2) {
-        parsedData[parts[0].trim()] = parts.sublist(1).join(":").trim();
+        parsedData[parts[0].trim().toLowerCase()] = parts.sublist(1).join(":").trim();
       }
     }
     return parsedData;
@@ -229,10 +239,23 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     if (scannedItem.isEmpty) return;
 
     String itemName = scannedItem['item_name'] ?? "";
+    String brand = scannedItem['brand'] ?? "";
     String category = scannedItem['category'] ?? "";
     String newQuantityInput = quantityController.text.trim();
     String expirationDate = expirationController.text.trim();
     String dateUpdated = DateTime.now().toIso8601String();
+
+    // Create unique ID using name and brand
+    String documentId = "${itemName}_$brand"
+        .replaceAll(" ", "_")
+        .replaceAll(":", "_")
+        .toLowerCase();
+
+    DocumentReference itemRef = FirebaseFirestore.instance
+        .collection('stock')
+        .doc(category)
+        .collection('items')
+        .doc(documentId); // Use combined ID
 
     // Sanitize names for Firestore path
     category = category.replaceAll(" ", "_").replaceAll(":", "_");
@@ -241,6 +264,12 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     if (itemName.isEmpty || category.isEmpty || newQuantityInput.isEmpty) {
       Get.snackbar("Error", "Item name, category, or quantity is missing",
           backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    if (brand.isEmpty) {
+      Get.snackbar("Error", "Brand information is missing",
+          backgroundColor: Colors.red);
       return;
     }
 
@@ -309,6 +338,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       // Save to history
       await FirebaseFirestore.instance.collection("history").add({
         "Item Name": scannedItem['item_name'] ?? "Unknown",
+        "Brand": brand,
         "Quantity Added": newQuantity.toString(),
         "New Total": updatedQuantity.toString(),
         "Category": scannedItem['category'] ?? "Unknown",

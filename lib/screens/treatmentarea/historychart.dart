@@ -261,24 +261,24 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
       builder: (context) => AlertDialog(
         title: Text("Item Details",
             style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow("Item Name:", item["Item Name"]),
-              _buildDetailRow("Action:", item["Action"]),
-              _buildDetailRow("Category:", item["Category"]),
-              if (item["Action"] == "Add Stock") ...[
-                _buildDetailRow("Quantity Added:", item["Quantity Added"]),
-                _buildDetailRow("New Total:", item["New Total"]),
-              ],
-              _buildDetailRow("Date:", item["Date"]),
-              if (item.containsKey("Notes"))
-                _buildDetailRow("Notes:", item["Notes"]),
-            ],
-          ),
-        ),
+         content: SingleChildScrollView(
+      child: Column(
+      mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDetailRow("Item Name:", item["Item Name"] ?? "N/A"),
+          _buildDetailRow("Action:", item["Action"] ?? "N/A"),
+          _buildDetailRow("Category:", item["Category"] ?? "N/A"),
+          if (item["Action"] == "Add Stock" && item["Quantity Added"] != null)
+            _buildDetailRow("Quantity Added:", item["Quantity Added"].toString()),
+          if (item["Action"] == "Add Stock" && item["New Total"] != null)
+            _buildDetailRow("New Total:", item["New Total"].toString()),
+          _buildDetailRow("Date:", item["Date"] ?? "N/A"),
+          if (item.containsKey("Notes"))
+            _buildDetailRow("Notes:", item["Notes"] ?? "N/A"),
+        ],
+      ),
+    ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),

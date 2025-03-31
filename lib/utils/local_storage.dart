@@ -6,20 +6,63 @@ import 'package:get_storage/get_storage.dart';
 class LocalStorage {
   static final GetStorage _storage = GetStorage();
 
+
   // Keys for storing data
   static const String _fcmTokenKey = 'fcmToken';
   static const String _userIdKey = 'userId';
   static const String _apnTokenKey = 'apnsToken';
+  static const String _lastSeenNotificationKey = 'last_seen_notification';
+
 
 
   // Retrieve FCM and APN token from local storage
   static String? getFCMToken() => _storage.read<String>(_fcmTokenKey);
   static String? getAPNsToken() => _storage.read<String>(_apnTokenKey);
 
+  static const String _lastNotificationDateKey = 'lastNotificationDate';
+
   // Initialize GetStorage (usually done in main function)
   static Future<void> init() async {
     await GetStorage.init();
+
+
   }
+
+  static Future<void> saveLastSeenNotification(DateTime date) async {
+    await _storage.write(_lastSeenNotificationKey, date.toIso8601String());
+  }
+
+
+  static DateTime? getLastSeenNotification() {
+    final stored = _storage.read<String>(_lastSeenNotificationKey);
+    return stored != null ? DateTime.parse(stored) : null;
+  }
+
+
+
+// Get the last seen notification timestamp
+  static Future<void> saveLastNotificationDate(DateTime date) async {
+    await _storage.write(_lastNotificationDateKey, date.toIso8601String());
+  }
+
+  static DateTime? getLastNotificationDate() {
+    final dateStr = _storage.read<String>(_lastNotificationDateKey);
+    if (dateStr == null) return null;
+    return DateTime.tryParse(dateStr);
+  }
+
+
+
+// Optional: clear it
+  static Future<void> deleteLastSeenNotification() async {
+    await _storage.remove(_lastSeenNotificationKey);
+    print("🗑️ Last seen notification date cleared");
+  }
+
+  static String? getLastSeenNotificationRaw() {
+    return _storage.read<String>(_lastSeenNotificationKey);
+  }
+
 
 
 

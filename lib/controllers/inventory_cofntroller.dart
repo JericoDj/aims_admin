@@ -19,7 +19,9 @@ class InventoryController extends GetxController {
     "Medical_Supplies",
     "Medical_Drugs",
     "Dental",
-    "Miscellaneous"
+    "Miscellaneous",
+    "Office Equipment",
+    "Office Supplies"
   ];
 
   @override

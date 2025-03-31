@@ -32,7 +32,9 @@ class QRCodeController extends GetxController {
     "Medical Supplies",
     "Medical Drugs",
     "Dental",
-    "Miscellaneous"
+    "Miscellaneous",
+    "Office Equipment",
+    "Office Supplies"
   ];
 
   /// **Generate QR Code, Upload to Firebase Storage, Save to Firestore, and Send Notification**

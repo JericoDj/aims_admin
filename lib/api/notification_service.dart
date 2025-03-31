@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:flutter/services.dart';
+
+import '../utils/local_storage.dart';
 
 class NotificationService {
   static const String _fcmUrl = 'https://fcm.googleapis.com/v1/projects/aims-5d185/messages:send';
@@ -10,6 +13,7 @@ class NotificationService {
   static Future<String> getAccessToken() async {
     final serviceAccount = await rootBundle.loadString('assets/generated.json');
     final serviceAccountJson = json.decode(serviceAccount);
+
 
     final accountCredentials = ServiceAccountCredentials.fromJson(serviceAccountJson);
 
@@ -20,6 +24,23 @@ class NotificationService {
     );
 
     return authClient.credentials.accessToken.data;
+  }
+
+  Stream<QuerySnapshot> getNotificationsStream() {
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    return _firestore.collection('history')
+        .orderBy('Date Generated', descending: true)
+        .snapshots();
+  }
+
+  bool hasNewNotifications(List<DocumentSnapshot> notifications) {
+    final lastSeenRaw = LocalStorage.getLastSeenNotificationRaw();
+    final lastSeen = lastSeenRaw != null ? DateTime.parse(lastSeenRaw) : null;
+
+    return notifications.any((doc) {
+      final date = (doc['Date Generated'] as Timestamp).toDate();
+      return lastSeen == null || date.isAfter(lastSeen);
+    });
   }
 
   /// Sends a push notification using the FCM V1 API
