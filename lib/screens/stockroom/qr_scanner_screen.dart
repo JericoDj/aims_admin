@@ -178,21 +178,34 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 _buildDetailRow("Item Name", scannedItem['item_name'] ?? "N/A"),
                 _buildDetailRow("Brand", scannedItem['brand'] ?? "N/A"),
                 _buildDetailRow("Category", scannedItem['category'] ?? "N/A"),
+                _buildDetailRow("Unit", scannedItem['unit_measurement'] ?? "N/A"),
+
 
                 SizedBox(height: 15),
 
+
                 Text("Enter Quantity", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
                 SizedBox(height: 5),
-                TextField(
-                  controller: quantityController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: "Enter quantity",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  style: TextStyle(fontSize: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: quantityController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: "Enter quantity",
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                        style: TextStyle(fontSize: 18),
+                      ),
+                    ),
+                    SizedBox(width: 10),
+
+                  ],
                 ),
+
 
                 SizedBox(height: 15),
 

@@ -57,6 +57,7 @@ class InventoryController extends GetxController {
             "name": itemDoc["item_name"] ?? "Unknown Item",
             "brand": itemDoc["brand"] ?? "Unknown",
             "quantity": itemDoc["quantity"] ?? 0,
+            "unit_measurement": itemDoc["unit_measurement"] ?? 0,
             "category": category, // Use category from list
             "expiration_date": itemDoc["expiration_date"] ?? "N/A",
             "qr_code_url": itemDoc["qr_code_url"] ?? "",

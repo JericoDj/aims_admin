@@ -272,6 +272,7 @@ class InventoryScreen extends StatelessWidget {
     final itemName = item['name'] ?? "Unknown Item";
     final category = item['category'] ?? "Unknown Category";
     final quantity = item['quantity']?.toString() ?? "N/A";
+    final unit = item['unit_measurement']?.toString() ?? "N/A";
     final expirationDate = item['expiration_date']?.toString() ?? "N/A";
     final qrData = item['qr_code_url'] ?? "";
 
@@ -292,7 +293,9 @@ class InventoryScreen extends StatelessWidget {
                 _buildDetailRow("Name:", itemName),
                 _buildDetailRow("Category:", category),
                 _buildDetailRow("Stock:", quantity),
+                _buildDetailRow("Unit", unit),
                 _buildDetailRow("Expiry:", expirationDate),
+
                 SizedBox(height: 16),
                 Center(
                   child: Screenshot(

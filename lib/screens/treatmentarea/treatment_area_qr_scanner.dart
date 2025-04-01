@@ -163,6 +163,7 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
                 _buildDetailRow("Item Name", scannedItem['item_name'] ?? "N/A"),
                 _buildDetailRow("Brand", scannedItem['brand'] ?? "N/A"),
                 _buildDetailRow("Category", scannedItem['category'] ?? "N/A"),
+                _buildDetailRow("Unit", scannedItem['unit_measurement'] ?? "N/A"),
 
                 SizedBox(height: 15),
 
