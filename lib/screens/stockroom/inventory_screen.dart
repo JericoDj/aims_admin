@@ -16,14 +16,28 @@ class InventoryScreen extends StatelessWidget {
   bool _isSaving = false;
 
   Future<bool> _checkPermissions() async {
+    print("Checking permissions...");
+
     if (Platform.isAndroid) {
+      print("Android platform detected");
       final androidInfo = await DeviceInfoPlugin().androidInfo;
+      print("Android SDK version: ${androidInfo.version.sdkInt}");
+
       if (androidInfo.version.sdkInt >= 33) {
-        return await Permission.photos.status.isGranted;
+        print("Checking PHOTOS permission");
+        final status = await Permission.photos.status;
+        print("Photos permission status: $status");
+        return status.isGranted;
+      } else {
+        print("Checking STORAGE permission");
+        final status = await Permission.storage.status;
+        print("Storage permission status: $status");
+        return status.isGranted;
       }
-      return await Permission.storage.status.isGranted;
     } else if (Platform.isIOS) {
-      return await Permission.photosAddOnly.status.isGranted;
+      final status = await Permission.photosAddOnly.status;
+      print('iOS PhotosAddOnly Status: $status');
+      return status.isGranted;
     }
     return false;
   }
@@ -37,7 +51,8 @@ class InventoryScreen extends StatelessWidget {
         await Permission.storage.request();
       }
     } else if (Platform.isIOS) {
-      await Permission.photosAddOnly.request();
+      final status = await Permission.photosAddOnly.request();
+      print('Requested iOS PhotosAddOnly: $status');
     }
   }
 
@@ -51,21 +66,27 @@ class InventoryScreen extends StatelessWidget {
     );
 
     try {
-      if (!await _checkPermissions()) {
+      bool hasPermission = await _checkPermissions();
+
+      if (!hasPermission) {
+        // Check if permission was permanently denied (iOS specific)
+        if (Platform.isIOS) {
+          final status = await Permission.photosAddOnly.status;
+          if (status.isPermanentlyDenied) {
+            Get.back();
+            _showSettingsDialog("Please enable photo add permissions in settings");
+            return;
+          }
+        }
+
         await _requestPermissions();
-        if (!await _checkPermissions()) {
+        hasPermission = await _checkPermissions();
+
+        if (!hasPermission) {
           Get.back();
-          Get.defaultDialog(
-            title: "Permission Required",
-            middleText: "Please enable storage permissions in app settings",
-            textConfirm: "Open Settings",
-            confirmTextColor: Colors.white,
-            onConfirm: () async {
-              await openAppSettings();
-              Get.back();
-            },
-            textCancel: "Cancel",
-          );
+          _showSettingsDialog(Platform.isAndroid
+              ? "Please enable storage permissions in app settings"
+              : "Please enable photo add permissions in settings");
           return;
         }
       }
@@ -125,6 +146,7 @@ class InventoryScreen extends StatelessWidget {
         fileName: "${sanitized}_${DateTime.now().millisecondsSinceEpoch}",
         quality: 95,
         androidRelativePath: "Pictures/YourAppName",
+
         skipIfExists: false,
       );
 
@@ -148,6 +170,19 @@ class InventoryScreen extends StatelessWidget {
     } finally {
       _isSaving = false;
     }
+  }
+  void _showSettingsDialog(String message) {
+    Get.defaultDialog(
+      title: "Permission Required",
+      middleText: message,
+      textConfirm: "Open Settings",
+      confirmTextColor: Colors.white,
+      onConfirm: () async {
+        await openAppSettings();
+        Get.back();
+      },
+      textCancel: "Cancel",
+    );
   }
 
   @override

@@ -139,21 +139,65 @@ void main() async {
 
 /// ✅ Request Permissions for Android & iOS
 Future<void> _requestPermissions() async {
-  if (!kIsWeb) {
+
+    // Basic permissions
     await [
       Permission.camera,
       Permission.microphone,
       Permission.storage,
       Permission.manageExternalStorage,
-      Permission.photos,
     ].request();
 
-    // ✅ Request Notification Permission Separately
+    // Notifications
     if (await Permission.notification.isDenied) {
       await Permission.notification.request();
     }
+
+    // Photos - handled separately for better control
+    await _handlePhotoPermissions();
+  }
+
+
+Future<void> _handlePhotoPermissions() async {
+  final status = await Permission.photosAddOnly.status;
+
+  if (status.isGranted) {
+    debugPrint("✅ Photo add permission already granted");
+    return;
+  }
+
+  if (status.isPermanentlyDenied) {
+    // Custom GetX dialog to explain and guide user
+    Get.defaultDialog(
+      title: 'Permission Needed',
+      content: const Text(
+          'To save QR codes to your gallery, photo permission is required.\n\nPlease enable access in Settings.'
+      ),
+      confirm: TextButton(
+        onPressed: () async {
+          Get.back();
+          await openAppSettings(); // Send to iOS Settings
+        },
+        child: const Text('Open Settings'),
+      ),
+      cancel: TextButton(
+        onPressed: () => Get.back(),
+        child: const Text('Cancel'),
+      ),
+    );
+    return;
+  }
+
+  // Safe to request now
+  final result = await Permission.photosAddOnly.request();
+
+  if (result.isGranted) {
+    debugPrint("✅ Photo permission granted after request");
+  } else {
+    debugPrint("❌ Photo permission still denied");
   }
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

@@ -266,6 +266,10 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
       mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (item["Action"] == "Add Stock")
+            _buildDetailRow("Quantity Added:", item["Quantity Added"]?.toString() ?? "N/A")
+          else
+            _buildDetailRow("Quantity:", item["Quantity"] ?? "N/A"),
           _buildDetailRow("Item Name:", item["Item Name"] ?? "N/A"),
           _buildDetailRow("Action:", item["Action"] ?? "N/A"),
           _buildDetailRow("Category:", item["Category"] ?? "N/A"),
