@@ -18,6 +18,10 @@
 			<string>processing</string>
 			<string>remote-notification</string>
 		</array>
+		<key>BGTaskSchedulerPermittedIdentifiers</key>
+		<array>
+			<string>com.leosgroup.aims.admin.aimsAdmin.refresh</string>
+		</array>
 		<key>NSUserNotificationUsageDescription</key>
 		<string>We need permission to send you notifications.</string>
 		<key>NSFileProtectionCompleteUntilFirstUserAuthentication</key>
