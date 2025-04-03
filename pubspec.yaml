@@ -97,10 +97,10 @@ dev_dependencies:
 
   flutter_launcher_icons: ^0.14.3
 
-flutter_icons:
-  android: "launcher_icon"
+flutter_launcher_icons:
+  android: true
   ios: true
-  image_path: "assets/images/logo/AIMS logo.jpg"
+  image_path: "assets/images/logo/AIMS LOGO.jpg"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
