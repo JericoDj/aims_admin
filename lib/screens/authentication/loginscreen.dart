@@ -40,11 +40,11 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Show loading spinner
-    Get.dialog(Center(child: CircularProgressIndicator()), barrierDismissible: false);
-
     try {
       UserCredential? userCredential = await _authRepo.loginWithEmailAndPassword(email, password);
+
+      // Dismiss the loading spinner after trying to login
+      Get.back();
 
       if (userCredential != null) {
         User user = userCredential.user!;
@@ -53,44 +53,39 @@ class _LoginScreenState extends State<LoginScreen> {
         bool isAdmin = await _checkIfUserIsAdmin(user);
 
         if (!isAdmin) {
-          try {
-            print("🔧 Setting user as admin...");
-            await _authRepo.setUserAsAdmin(user.uid);
-
-            // Recheck if admin setup was successful
-            isAdmin = await _checkIfUserIsAdmin(user);
-
-            if (!isAdmin) {
-              Get.back(); // remove spinner
-              Get.snackbar("Access Denied", "Admin setup failed. Please contact support.",
-                  backgroundColor: Colors.red, colorText: Colors.white);
-              await FirebaseAuth.instance.signOut();
-              return;
-            }
-          } catch (e) {
-            Get.back(); // remove spinner
-            Get.snackbar("Error", "Failed to set admin: ${e.toString()}",
-                backgroundColor: Colors.red, colorText: Colors.white);
-            await FirebaseAuth.instance.signOut();
-            return;
-          }
+          Get.snackbar("Access Denied", "You are not an Admin. Access restricted.",
+              backgroundColor: Colors.red, colorText: Colors.white);
+          await FirebaseAuth.instance.signOut();
+          return;
         }
 
-        // ✅ Save user data locally only after successful login
-        await LocalStorage.saveUserId(user.uid);
-        await LocalStorage.saveFCMToken();
+        // If user is admin, proceed with admin setup if necessary
+        try {
+          print("🔧 Setting user as admin...");
 
-        // All checks passed: go to home
-        Get.back(); // remove spinner
-        Get.offAll(() => HomeScreen());
-        Get.snackbar("Login Successful", "Welcome back!",
-            backgroundColor: Colors.green, colorText: Colors.white);
+          // This block is no longer needed since we already check if the user is admin
+          // and simply proceed. If the user is admin, there's no need to set them again.
+
+          // ✅ Save user data locally only after successful login
+          await LocalStorage.saveUserId(user.uid);
+          await LocalStorage.saveFCMToken();
+
+          // All checks passed: go to home
+          Get.offAll(() => HomeScreen());
+          Get.snackbar("Login Successful", "Welcome back!",
+              backgroundColor: Colors.green, colorText: Colors.white);
+        } catch (e) {
+          Get.snackbar("Error", "Failed during admin setup: ${e.toString()}",
+              backgroundColor: Colors.red, colorText: Colors.white);
+          await FirebaseAuth.instance.signOut();
+          return;
+        }
       } else {
-        Get.back();
         Get.snackbar("Login Failed", "Invalid credentials or user not found.",
             backgroundColor: Colors.red, colorText: Colors.white);
       }
     } catch (e) {
+      // Dismiss the loading spinner in case of an error
       Get.back();
       Get.snackbar("Login Error", e.toString(),
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -100,9 +95,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
 
 
+
+
   Future<bool> _checkIfUserIsAdmin(User user) async {
-    final idTokenResult = await user.getIdTokenResult(true);
-    return idTokenResult.claims?['admin'] == true;
+    try {
+      // Get the user's UID
+      final uid = user.uid;
+
+      // Get the Firestore document for the user
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      // Check if the document exists and if the 'role' field is available
+      if (userDoc.exists) {
+        // Get the role from Firestore
+        final role = userDoc['role'];
+
+        // Return true if the role is 'Admin', false otherwise
+        return role == 'Admin';
+      } else {
+        // If the user document does not exist, you may handle it accordingly (e.g., not found or unauthorized)
+        return false;
+      }
+    } catch (e) {
+      // Handle error (e.g., network error, Firestore error)
+      print('Error checking user role: $e');
+      return false;
+    }
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:aims_admin/repository/authentication_repository.dart';
 import 'package:aims_admin/screens/home/offline/connect_to_offline_controller.dart';
+import 'package:aims_admin/utils/colors.dart';
 import 'package:aims_admin/utils/local_storage.dart';
 import 'package:aims_admin/utils/notification_controller.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -209,7 +210,7 @@ class MyApp extends StatelessWidget {
       title: 'AIMS Inventory',
       theme: ThemeData(
         fontFamily: 'Bourgeois',
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: MyColors.orange),
         useMaterial3: true,
       ),
       home: const LoginScreen(),

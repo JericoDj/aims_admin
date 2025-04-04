@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../utils/colors.dart';
+import '../../utils/local_storage.dart';
 import '../../widgets/create_account_dialog.dart';
 import 'package:dio/dio.dart' as dio; // Rename Dio's Response class
 
@@ -283,6 +284,16 @@ class _ManageAccountsState extends State<ManageAccounts> {
   /// **Delete User from Firebase Authentication via Cloud Function using Dio**
   Future<void> _deleteUser(String uid, String docId) async {
     try {
+      // 🔹 Check if the current user is the same as the user to delete
+      String currentUserUid = LocalStorage.getUserId() ?? '';
+
+      // If the current logged-in user is the same as the one to be deleted, prevent deletion
+      if (uid == currentUserUid) {
+        Get.snackbar("Error", "Deleting the current admin isn't allowed.",
+            backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
+
       // 🔹 Cloud Function URL (Make sure it's correct)
       String functionUrl = "https://deleteuser-eh5kbvz3vq-uc.a.run.app";
 
