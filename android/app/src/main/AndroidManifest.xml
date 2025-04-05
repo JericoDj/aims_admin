@@ -22,7 +22,7 @@
         android:usesCleartextTraffic="true"
         android:label="aims_admin"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/ic_launcher">
 
 
 
