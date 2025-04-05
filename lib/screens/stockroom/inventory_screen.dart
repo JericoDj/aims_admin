@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:math';
 import 'package:aims_admin/controllers/inventory_cofntroller.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -185,6 +186,66 @@ class InventoryScreen extends StatelessWidget {
     );
   }
 
+
+
+  bool _isOutOfStock(Map<String, dynamic> item) {
+    final quantity = int.tryParse(item['quantity'].toString()) ?? 0;
+    return quantity == 0;
+  }
+
+  bool _isLowStock(Map<String, dynamic> item) {
+    final quantity = int.tryParse(item['quantity'].toString()) ?? 0;
+    final rawThreshold = item['low_stock_threshold'];
+    final threshold = int.tryParse(rawThreshold.toString()) ?? -1;
+
+    return quantity > 0 && threshold >= 0 && quantity <= threshold;
+  }
+
+
+
+  bool _isNearExpiry(Map<String, dynamic> item) {
+    try {
+      final rawDays = item['expiry_alert_days'];
+      final alertDays = int.tryParse(rawDays.toString()) ?? -1;
+
+      if (alertDays <= 0) return false;
+
+      final expiryRaw = item['expiration_date'];
+      DateTime expiryDate;
+
+      if (expiryRaw is Timestamp) {
+        expiryDate = expiryRaw.toDate();
+      } else if (expiryRaw is String) {
+        expiryDate = DateTime.tryParse(expiryRaw) ?? DateTime(2100);
+      } else {
+        return false;
+      }
+
+      final alertDate = expiryDate.subtract(Duration(days: alertDays));
+      return DateTime.now().isAfter(alertDate) || DateTime.now().isAtSameMomentAs(alertDate);
+    } catch (_) {
+      return false;
+    }
+  }
+
+
+
+  Widget _buildTag(String text, Color color) {
+    return Container(
+      margin: EdgeInsets.only(left: 6),
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -270,8 +331,23 @@ class InventoryScreen extends StatelessWidget {
                           side: BorderSide(color: MyColors.red, width: 1),
                         ),
                         child: ListTile(
-                          title: Text(itemName,
-                              style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red)),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  itemName,
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red),
+                                ),
+                              ),
+                              if (_isOutOfStock(item)) ...[
+                                _buildTag("Out of Stock", Colors.red),
+                              ] else ...[
+                                if (_isLowStock(item)) _buildTag("Low Stock", Colors.orange),
+                                if (_isNearExpiry(item)) _buildTag("Nearly Expiring", Colors.redAccent),
+                              ],
+
+                            ],
+                          ),
                           subtitle: Text("Category: $category"),
                           trailing: Image.network(
                             qrData,
@@ -310,6 +386,8 @@ class InventoryScreen extends StatelessWidget {
     final unit = item['unit_measurement']?.toString() ?? "N/A";
     final expirationDate = item['expiration_date']?.toString() ?? "N/A";
     final qrData = item['qr_code_url'] ?? "";
+    final lowStockValue = item['low_stock_threshold']?.toString() ?? "N/A";
+    final nearlyExpiryDays = item['expiry_alert_days']?.toString() ?? "N/A";
 
     showDialog(
       context: context,
@@ -330,6 +408,8 @@ class InventoryScreen extends StatelessWidget {
                 _buildDetailRow("Stock:", quantity),
                 _buildDetailRow("Unit", unit),
                 _buildDetailRow("Expiry:", expirationDate),
+                _buildDetailRow("Low Stock Threshold:", lowStockValue),
+                _buildDetailRow("Expiry Alert (Days):", nearlyExpiryDays),
 
                 SizedBox(height: 16),
                 Center(
@@ -352,6 +432,21 @@ class InventoryScreen extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 16),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => _setLowStockValue(context, item),
+                      child: Text("Set Low Stock", style: TextStyle(color: MyColors.red)),
+                    ),
+                    // New Button: Set Nearly Expiry Date
+                    TextButton(
+                      onPressed: () => _setNearlyExpiryDate(context, item),
+                      child: Text("Set Expiry Alert", style: TextStyle(color: MyColors.red)),
+                    ),
+                  ],
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -367,6 +462,8 @@ class InventoryScreen extends StatelessWidget {
                       onPressed: Get.back,
                       child: Text("Close", style: TextStyle(color: MyColors.red)),
                     ),
+                    // New Button: Set Low Stock Value
+
                   ],
                 ),
               ],
@@ -376,6 +473,92 @@ class InventoryScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _setNearlyExpiryDate(BuildContext context, Map<String, dynamic> item) {
+    final TextEditingController expiryDaysController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Set Expiry Alert"),
+        content: TextField(
+          controller: expiryDaysController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(hintText: "Enter days before expiry to alert"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              final input = expiryDaysController.text.trim();
+              if (input.isEmpty || int.tryParse(input) == null) {
+                Get.snackbar("Invalid Input", "Please enter a valid number",
+                    backgroundColor: Colors.red, colorText: Colors.white);
+                return;
+              }
+
+              final value = int.parse(input);
+              final itemId = item['id'].toString();
+
+              await _controller.updateItemField(itemId, 'expiry_alert_days', value);
+              Navigator.of(context, rootNavigator: true).pop(); // Close outer dialog
+
+              Get.back();
+              Get.snackbar("Updated", "Expiry alert set to $value days before expiration",
+                  backgroundColor: Colors.green, colorText: Colors.white);
+            },
+            child: Text("Set Alert"),
+          ),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text("Cancel"),
+          ),
+        ],
+      ),
+    );
+  }
+  void _setLowStockValue(BuildContext context, Map<String, dynamic> item) {
+    final TextEditingController lowStockController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Set Low Stock Threshold"),
+        content: TextField(
+          controller: lowStockController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(hintText: "Enter low stock value"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              final input = lowStockController.text.trim();
+              if (input.isEmpty || int.tryParse(input) == null) {
+                Get.snackbar("Invalid Input", "Please enter a valid number",
+                    backgroundColor: Colors.red, colorText: Colors.white);
+                return;
+              }
+
+              final value = int.parse(input);
+              final itemId = item['id'].toString();
+
+              await _controller.updateItemField(itemId, 'low_stock_threshold', value);
+              Navigator.of(context, rootNavigator: true).pop(); // Close outer dialog
+
+              Get.back(); // Close dialog
+              Get.snackbar("Updated", "Low stock threshold set to $value",
+                  backgroundColor: Colors.green, colorText: Colors.white);
+            },
+            child: Text("Set"),
+          ),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text("Cancel"),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(

@@ -30,6 +30,43 @@ class InventoryController extends GetxController {
     fetchInventory(); // Fetch data when the controller initializes
   }
 
+
+  Future<void> updateItemField(String itemId, String field, dynamic value) async {
+    try {
+      // Find the category where the item exists
+      final item = allItems.firstWhere((item) => item['id'].toString() == itemId, orElse: () => {});
+      final category = item['category'];
+      if (category == null) throw Exception("Category not found for item.");
+
+      // Update Firestore document
+      await _firestore
+          .collection("stock")
+          .doc(category)
+          .collection("items")
+          .doc(itemId)
+          .update({field: value});
+
+      print("✅ Updated $field for item $itemId to $value");
+
+      // Update local state
+      final index = filteredItems.indexWhere((item) => item['id'].toString() == itemId);
+      if (index != -1) {
+        filteredItems[index][field] = value;
+        filteredItems.refresh();
+      }
+
+      final allIndex = allItems.indexWhere((item) => item['id'].toString() == itemId);
+      if (allIndex != -1) {
+        allItems[allIndex][field] = value;
+        allItems.refresh();
+      }
+    } catch (e) {
+      print("❌ Error updating item: $e");
+      Get.snackbar("Error", "Failed to update $field",
+          backgroundColor: Colors.red, colorText: Colors.white);
+    }
+  }
+
   /// Fetch inventory data from Firestore (Only from predefined categories)
   Future<void> fetchInventory() async {
     try {
@@ -40,32 +77,37 @@ class InventoryController extends GetxController {
       for (String category in categories) {
         print("Fetching items for category: $category");
 
-        // Fetch items inside the selected category's "items" subcollection
         QuerySnapshot itemsSnapshot = await _firestore
             .collection("stock")
-            .doc(category) // Specific category document
-            .collection("items") // Access the "items" subcollection
+            .doc(category)
+            .collection("items")
             .get();
 
         print("Items found in $category: ${itemsSnapshot.size}");
 
         for (var itemDoc in itemsSnapshot.docs) {
-          print("Item Data: ${itemDoc.data()}"); // Debugging log
+          final data = itemDoc.data() as Map<String, dynamic>;
+
+          print("Item Data: $data");
 
           fetchedItems.add({
             "id": itemDoc.id,
-            "name": itemDoc["item_name"] ?? "Unknown Item",
-            "brand": itemDoc["brand"] ?? "Unknown",
-            "quantity": itemDoc["quantity"] ?? 0,
-            "unit_measurement": itemDoc["unit_measurement"] ?? 0,
-            "category": category, // Use category from list
-            "expiration_date": itemDoc["expiration_date"] ?? "N/A",
-            "qr_code_url": itemDoc["qr_code_url"] ?? "",
+            "name": data["item_name"] ?? "Unknown Item",
+            "brand": data["brand"] ?? "N/A",
+            "quantity": data["quantity"] ?? 0,
+            "unit_measurement": data["unit_measurement"] ?? "N/A",
+            "category": category,
+            "expiration_date": data.containsKey("expiration_date") ? data["expiration_date"] : "N/A",
+            "qr_code_url": data["qr_code_url"] ?? "",
+            "expiry_alert_days": data.containsKey("expiry_alert_days") ? data["expiry_alert_days"] : "N/A",
+            "low_stock_threshold": data.containsKey("low_stock_threshold") ? data["low_stock_threshold"] : "N/A",
+            "serial_no": data["serial_no"] ?? "N/A",
+            "storage_code": data["storage_code"] ?? "N/A",
+            "specifications": data["specifications"] ?? "N/A",
           });
         }
       }
 
-      // Update the observable lists
       allItems.assignAll(fetchedItems);
       filteredItems.assignAll(fetchedItems);
 
@@ -75,6 +117,7 @@ class InventoryController extends GetxController {
       Get.snackbar("Error", "Failed to load inventory.");
     }
   }
+
 
   /// Filter items based on search query
   void filterSearch(String query) {

@@ -135,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
       },
       child: SafeArea(
         child: Scaffold(
-          resizeToAvoidBottomInset: true,
+          resizeToAvoidBottomInset: true, // Avoid the bottom inset (keyboard) issues
           body: Container(
             width: double.infinity,
             height: screenHeight,
@@ -176,7 +176,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 20),
                       // Email text field with violet input text and label
                       TextField(
-
                         controller: _emailController,
                         style: TextStyle(color: MyColors.white),
                         decoration: InputDecoration(
@@ -194,7 +193,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 10),
                       // Password text field with violet input text and label
                       TextField(
-
                         controller: _passwordController,
                         obscureText: _obscureText,
                         style: TextStyle(color: MyColors.white),
@@ -229,7 +227,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             foregroundColor: MaterialStateProperty.all(MyColors.white),
                           ),
                           onPressed: () {
-
                             // Navigate to the Forgot Password screen
                             Get.to(ForgotPasswordScreen());
                           },
@@ -248,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Text(
                             'LOG IN',
                             style: TextStyle(
-                                color: MyColors.white, fontSize: 18,fontWeight: FontWeight.bold),
+                                color: MyColors.white, fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -258,13 +255,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 // Positioned version text at the bottom
                 Positioned(
-                  bottom: 30,
+                  bottom: 10,  // Ensure it's 10 pixels from the bottom of the screen
                   left: 0,
                   right: 0,
-                  child: Center(
-                    child: Text(
-                      "Version: ${AppVersion.version} (Build: ${AppVersion.build})",
-                      style: const TextStyle(color: Colors.white54, fontSize: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16), // Padding for both sides
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Version: ${AppVersion.version} (Build: ${AppVersion.build})",
+                          style: const TextStyle(color: Colors.white54, fontSize: 16),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -275,6 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
 
   Future<bool> _showExitDialog(BuildContext context) async {
     return await showDialog(
