@@ -153,7 +153,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Image.asset('assets/images/logo/logo.png', height: 180),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(100), // ← Apply radius here
+                        child: Image.asset(
+                          'assets/images/logo/AIMS LOGO.jpg',
+                          height: 180,
+                          fit: BoxFit.cover, // Optional: ensures image fills the shape
+                        ),
+                      ),
+
                       const SizedBox(height: 20),
                       Text(
                         "AIMS",

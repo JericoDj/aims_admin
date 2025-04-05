@@ -47,7 +47,13 @@ class QRCodeController extends GetxController {
 
       // Format item name for Firestore & Storage
       String rawItemName = itemNameController.text.trim();
+      String brand = brandController.text.trim();
       String formattedItemName = _sanitizeString(rawItemName); // Clean item name
+      String formattedBrand = _sanitizeString(brand);
+
+      // Combine item name and brand
+      String uniqueDocId = "${formattedItemName}_${formattedBrand}";
+
 
       // Format category for Firestore & Storage
       String categoryFolder = _sanitizeCategory(selectedCategory.value); // Prevent double underscores
@@ -82,7 +88,9 @@ class QRCodeController extends GetxController {
         print("✅ QR Code generated successfully!");
 
         // **Use item name for the QR code filename in Firebase Storage**
-        String fileName = "qr_${formattedItemName}.png";
+        String formattedBrand = _sanitizeString(brandController.text.trim());
+        String uniqueDocId = "${formattedBrand}_${formattedItemName}";
+        String fileName = "qr_$uniqueDocId.png";
         String filePath = "qr_codes/$categoryFolder/$fileName";
 
         print("📂 Storing QR Code in: $filePath");
@@ -101,7 +109,7 @@ class QRCodeController extends GetxController {
         String categoryCollection = "stock/$categoryFolder/items";
 
         // Use item name as document ID in Firestore
-        DocumentReference itemRef = FirebaseFirestore.instance.collection(categoryCollection).doc(formattedItemName);
+        DocumentReference itemRef = FirebaseFirestore.instance.collection(categoryCollection).doc(uniqueDocId);
 
         if (itemId == null) {
           print("📦 Creating new item in Firestore under category: $categoryFolder...");

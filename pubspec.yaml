@@ -124,13 +124,14 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   # assets:
   assets:
-    - assets/images/logo/logo.png
+    - assets/images/logo/AIMS LOGO.jpg
     - assets/images/login_background/AIMS_LOGIN_BACKGROUND.png
     - assets/images/login_background/homepage_background.png
     - assets/generated.json
     - assets/images/tutorial/aims.png
     - assets/images/tutorial/aims2.png
     - assets/images/tutorial/aims3.png
+
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -96,27 +97,42 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   /// **🔹 Simulate Password Reset Request**
-  void _resetPassword() {
+  void _resetPassword() async {
     String email = _emailController.text.trim();
 
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter your email!", style: TextStyle(color: Colors.white)), backgroundColor: MyColors.red),
+        SnackBar(
+          content: Text("Please enter your email!", style: TextStyle(color: Colors.white)),
+          backgroundColor: MyColors.red,
+        ),
       );
       return;
     }
 
-    // ✅ Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Reset link sent to $email!", style: TextStyle(color: Colors.black)),
-        backgroundColor: MyColors.white,
-      ),
-    );
+    try {
+      // ✅ Send password reset email via Firebase
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
-    // ✅ Optionally, navigate back to LoginScreen after a delay
-    Future.delayed(Duration(seconds: 2), () {
-      Get.off(() => LoginScreen());
-    });
-  }
-}
+      // ✅ Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Reset link sent to $email!", style: TextStyle(color: Colors.black)),
+          backgroundColor: MyColors.white,
+        ),
+      );
+
+      // ✅ Navigate back to LoginScreen after a short delay
+      Future.delayed(Duration(seconds: 2), () {
+        Get.off(() => LoginScreen());
+      });
+    } catch (e) {
+      // ❌ Show error message if something goes wrong
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to send reset email. ${e.toString()}", style: TextStyle(color: Colors.white)),
+          backgroundColor: MyColors.red,
+        ),
+      );
+    }
+  }}

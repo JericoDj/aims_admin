@@ -289,6 +289,11 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
 
       print("📢 Notification sent successfully!");
 
+      _isDialogOpen = false; // ✅ Allow next scan
+
+// Show a success message (optional)
+
+
       // Show a success message
 
     } catch (e) {

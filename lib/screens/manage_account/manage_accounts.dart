@@ -73,9 +73,19 @@ class _ManageAccountsState extends State<ManageAccounts> {
                         fontWeight: FontWeight.bold,
                         color: Colors.black87),
                   ),
-                  subtitle: Text(
-                    user["role"],
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user["role"],
+                        style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        user["email"] ?? "No email",
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                      ),
+                    ],
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),

@@ -11,10 +11,25 @@ import 'package:saver_gallery/saver_gallery.dart';
 import 'package:screenshot/screenshot.dart';
 import '../../utils/colors.dart';
 
-class InventoryScreen extends StatelessWidget {
+class InventoryScreen extends StatefulWidget {
+  @override
+  State<InventoryScreen> createState() => _InventoryScreenState();
+}
+
+class _InventoryScreenState extends State<InventoryScreen> {
   final InventoryController _controller = Get.put(InventoryController());
+
   final ScreenshotController screenshotController = ScreenshotController();
+
   bool _isSaving = false;
+
+  int _itemsToDisplay = 10;
+
+  void _loadMoreItems() {
+    setState(() {
+      _itemsToDisplay += 10;
+    });
+  }
 
   Future<bool> _checkPermissions() async {
     print("Checking permissions...");
@@ -57,7 +72,7 @@ class InventoryScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _saveQRCodeToGallery(BuildContext context, String qrUrl, String itemName) async {
+  Future<void> _saveQRCodeToGallery(BuildContext context, String qrUrl, String itemName, String brand) async {
     if (_isSaving) return;
     _isSaving = true;
 
@@ -123,10 +138,19 @@ class InventoryScreen extends StatelessWidget {
                     return Icon(Icons.broken_image, size: 150, color: Colors.red);
                   },
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
+                if (brand.isNotEmpty)
+                  Text(
+                    brand,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
                 Text(
-                  rawName,
-                  style: TextStyle(
+                  itemName,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
@@ -135,6 +159,7 @@ class InventoryScreen extends StatelessWidget {
                 ),
               ],
             ),
+
           ),
         ),
         pixelRatio: 3.0,
@@ -172,6 +197,7 @@ class InventoryScreen extends StatelessWidget {
       _isSaving = false;
     }
   }
+
   void _showSettingsDialog(String message) {
     Get.defaultDialog(
       title: "Permission Required",
@@ -186,8 +212,6 @@ class InventoryScreen extends StatelessWidget {
     );
   }
 
-
-
   bool _isOutOfStock(Map<String, dynamic> item) {
     final quantity = int.tryParse(item['quantity'].toString()) ?? 0;
     return quantity == 0;
@@ -200,8 +224,6 @@ class InventoryScreen extends StatelessWidget {
 
     return quantity > 0 && threshold >= 0 && quantity <= threshold;
   }
-
-
 
   bool _isNearExpiry(Map<String, dynamic> item) {
     try {
@@ -227,8 +249,6 @@ class InventoryScreen extends StatelessWidget {
       return false;
     }
   }
-
-
 
   Widget _buildTag(String text, Color color) {
     return Container(
@@ -275,7 +295,7 @@ class InventoryScreen extends StatelessWidget {
             ),
           ),
           title: Text(
-            "INVENTORY",
+            "STOCK ROOM - INVENTORY",
             style: TextStyle(color: MyColors.red, fontWeight: FontWeight.bold, fontSize: 28),
           ),
           actions: [
@@ -314,62 +334,108 @@ class InventoryScreen extends StatelessWidget {
                     ),
                   );
                 }
-                return ListView.builder(
-                  itemCount: _controller.filteredItems.length,
-                  itemBuilder: (context, index) {
-                    final item = _controller.filteredItems[index];
-                    final itemName = item['name'] ?? "Unknown Item";
-                    final category = item['category'] ?? "Unknown Category";
-                    final qrData = item['qr_code_url'] ?? "";
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _controller.filteredItems.length.clamp(0, _itemsToDisplay),
+                        itemBuilder: (context, index) {
+                          final item = _controller.filteredItems[index];
+                          final itemName = item['name'] ?? "Unknown Item";
+                          final brand = item['brand'] ?? "Unknown brand";
+                          final category = item['category'] ?? "Unknown Category";
+                          final qrData = item['qr_code_url'] ?? "";
 
-                    return GestureDetector(
-                      onTap: () => _showItemDetails(context, item),
-                      child: Card(
-                        margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(color: MyColors.red, width: 1),
-                        ),
-                        child: ListTile(
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  itemName,
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red),
-                                ),
+                          return GestureDetector(
+                            onTap: () => _showItemDetails(context, item),
+                            child: Card(
+                              margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(color: MyColors.red, width: 1),
                               ),
-                              if (_isOutOfStock(item)) ...[
-                                _buildTag("Out of Stock", Colors.red),
-                              ] else ...[
-                                if (_isLowStock(item)) _buildTag("Low Stock", Colors.orange),
-                                if (_isNearExpiry(item)) _buildTag("Nearly Expiring", Colors.redAccent),
-                              ],
-
-                            ],
-                          ),
-                          subtitle: Text("Category: $category"),
-                          trailing: Image.network(
-                            qrData,
-                            height: 50,
-                            width: 50,
-                            fit: BoxFit.contain,
-                            loadingBuilder: (context, child, progress) {
-                              return progress == null
-                                  ? child
-                                  : SizedBox(
+                              child: ListTile(
+                                title: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        itemName,
+                                        style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red),
+                                      ),
+                                    ),
+                                    if (_isOutOfStock(item)) ...[
+                                      _buildTag("Out of Stock", Colors.red),
+                                    ] else ...[
+                                      if (_isLowStock(item)) _buildTag("Low Stock", Colors.orange),
+                                      if (_isNearExpiry(item)) _buildTag("Nearly Expiring", Colors.redAccent),
+                                    ],
+                                  ],
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text("Brand: $brand"),
+                                    Text("Category: $category"),
+                                  ],
+                                ),
+                                trailing: Image.network(
+                                  qrData,
                                   height: 50,
                                   width: 50,
-                                  child: CircularProgressIndicator());
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(Icons.broken_image, size: 50, color: Colors.red);
-                            },
+                                  fit: BoxFit.contain,
+                                  loadingBuilder: (context, child, progress) {
+                                    return progress == null
+                                        ? child
+                                        : SizedBox(
+                                        height: 50,
+                                        width: 50,
+                                        child: CircularProgressIndicator());
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(Icons.broken_image, size: 50, color: Colors.red);
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    if (_controller.filteredItems.length > 0)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: _itemsToDisplay < _controller.filteredItems.length
+                            ? ElevatedButton(
+                          onPressed: _loadMoreItems,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: MyColors.red,
+                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 4,
+                            shadowColor: MyColors.red.withOpacity(0.3),
+                          ),
+                          child: Text(
+                            "Load More",
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                            : Text(
+                          "All items loaded",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
                           ),
                         ),
                       ),
-                    );
-                  },
+
+                  ],
                 );
               }),
             ),
@@ -382,6 +448,7 @@ class InventoryScreen extends StatelessWidget {
   void _showItemDetails(BuildContext context, Map<String, dynamic> item) {
     final itemName = item['name'] ?? "Unknown Item";
     final category = item['category'] ?? "Unknown Category";
+    final brand = item['brand'] ?? "Unknown Brand";
     final quantity = item['quantity']?.toString() ?? "N/A";
     final unit = item['unit_measurement']?.toString() ?? "N/A";
     final expirationDate = item['expiration_date']?.toString() ?? "N/A";
@@ -404,9 +471,11 @@ class InventoryScreen extends StatelessWidget {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 16),
                 _buildDetailRow("Name:", itemName),
+                _buildDetailRow("Brand:", brand),
                 _buildDetailRow("Category:", category),
+
                 _buildDetailRow("Stock:", quantity),
-                _buildDetailRow("Unit", unit),
+
                 _buildDetailRow("Expiry:", expirationDate),
                 _buildDetailRow("Low Stock Threshold:", lowStockValue),
                 _buildDetailRow("Expiry Alert (Days):", nearlyExpiryDays),
@@ -451,7 +520,7 @@ class InventoryScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     TextButton(
-                      onPressed: () => _saveQRCodeToGallery(context, qrData, itemName),
+                      onPressed: () => _saveQRCodeToGallery(context, qrData, itemName, brand),
                       child: Text("Save QR", style: TextStyle(color: MyColors.red)),
                     ),
                     TextButton(
@@ -516,6 +585,7 @@ class InventoryScreen extends StatelessWidget {
       ),
     );
   }
+
   void _setLowStockValue(BuildContext context, Map<String, dynamic> item) {
     final TextEditingController lowStockController = TextEditingController();
 
@@ -558,7 +628,6 @@ class InventoryScreen extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(

@@ -146,6 +146,15 @@ class _GeneratedQRCodeScreenState extends State<GeneratedQRCodeScreen> {
                         },
                       ),
                       const SizedBox(height: 10),
+                      if (widget.itemDetails['brand'] != null && widget.itemDetails['brand']!.isNotEmpty)
+                        Text(
+                          widget.itemDetails['brand']!,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
                       Text(itemName,
                           style: TextStyle(
                             fontSize: 24,
