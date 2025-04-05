@@ -105,11 +105,12 @@ Future<void> _showNotification(RemoteMessage message) async {
 
 void main() async {
   // Register the NotificationController globally before running the app
+  WidgetsFlutterBinding.ensureInitialized();
 
   Get.put(ConnectToOfflineController());
   Get.put(NotificationController());
 
-  WidgetsFlutterBinding.ensureInitialized();
+
 
   try {
     await Firebase.initializeApp(
@@ -125,14 +126,10 @@ void main() async {
     // ✅ Request necessary permissions
     await _requestPermissions();
 
-    if (kIsWeb) {
-      // ✅ If running on web, use WebApp
-      Get.testMode = true;
-      runApp(WebApp());
-    } else {
-      // ✅ If running on mobile, use MyApp
-      runApp(const MyApp());
-    }
+
+    runApp(const MyApp()); // ✅ Required to launch your app
+
+
   } catch (e) {
     debugPrint("❌ Firebase initialization failed: \$e");
   }
@@ -214,27 +211,6 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const LoginScreen(),
-    );
-  }
-}
-
-class WebApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 600,
-        height: 800,
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.black, width: 2),
-        ),
-        child: GetMaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'AIMS Inventory',
-          theme: ThemeData(primarySwatch: Colors.blue),
-          home: const LoginScreen(),
-        ),
-      ),
     );
   }
 }
