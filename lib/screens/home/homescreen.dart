@@ -344,7 +344,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: EdgeInsets.symmetric(horizontal: 20),
                           child: Column(
                             children: [
-                              Image.asset('assets/images/logo/AIMS LOGO.jpg', height: 165),
+                              Transform.scale(
+                                scale: 1.3, // Increase to zoom in
+                                child: Image.asset('assets/images/logo/AIMS LOGO.jpg', height:180),
+                              ),
                               SizedBox(height: 10),
                               Text(
                                 "AIMS",

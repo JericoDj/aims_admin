@@ -12,6 +12,22 @@ import '../utils/notification_service.dart';
 class QRCodeController extends GetxController {
 
 
+  final RxInt totalCharacterCount = 0.obs;
+
+  void updateCharacterCount() {
+    int count = storageCodeController.text.trim().length +
+        serialNoController.text.trim().length +
+        itemNameController.text.trim().length +
+        brandController.text.trim().length +
+        expirationDateController.text.trim().length +
+        unitMeasurementController.text.trim().length +
+        specificationController.text.trim().length +
+        quantityController.text.trim().length;
+
+    totalCharacterCount.value = count;
+  }
+
+
   final formKey = GlobalKey<FormState>();
 
 

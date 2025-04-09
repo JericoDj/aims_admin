@@ -6,6 +6,30 @@ import '../../controllers/qr_code_controller.dart';
 class GenerateQRCodeScreen extends StatelessWidget {
   final QRCodeController controller = Get.put(QRCodeController());
 
+
+  bool _isFormDataTooLong(QRCodeController controller, {int maxChars = 85}) {
+    int totalChars = 0;
+
+    List<TextEditingController> fields = [
+      controller.storageCodeController,
+      controller.serialNoController,
+      controller.itemNameController,
+      controller.brandController,
+      controller.expirationDateController,
+      controller.unitMeasurementController,
+      controller.specificationController,
+      controller.quantityController,
+    ];
+
+    for (var ctrl in fields) {
+      totalChars += ctrl.text.trim().length;
+    }
+
+    print("🔢 Total form characters: $totalChars");
+    return totalChars > maxChars;
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,13 +78,38 @@ class GenerateQRCodeScreen extends StatelessWidget {
                 _buildTextField("Specifications", controller.specificationController),
                 _buildTextField("Quantity", controller.quantityController, isNumeric: true), // ✅ Added Quantity Field
 
+                Obx(() => Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    "Character Count: ${controller.totalCharacterCount.value} / 85",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: controller.totalCharacterCount.value > 85 ? Colors.red : Colors.grey[700],
+                    ),
+                  ),
+                )),
+                SizedBox(height: 10),
+
+
+
                 SizedBox(height: 20),
 
                 // Create Item Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: controller.generateQRCode,
+                    onPressed: () {
+                      if (_isFormDataTooLong(controller)) {
+                        Get.snackbar(
+                          "Character Limit Exceeded",
+                          "Total character count must not exceed 85 characters.",
+                          backgroundColor: Colors.red,
+                          colorText: Colors.white,
+                        );
+                        return;
+                      }
+                      controller.generateQRCode();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: MyColors.orange,
                       padding: EdgeInsets.symmetric(vertical: 15),
@@ -84,9 +133,10 @@ class GenerateQRCodeScreen extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: 5),
       child: TextFormField(
         controller: controller,
-        keyboardType: isNumeric ? TextInputType.number : TextInputType.text, // ✅ Numeric input for Quantity
+        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
         decoration: _inputDecoration(label),
         validator: (value) => value == null || value.isEmpty ? "This field is required" : null,
+        onChanged: (_) => this.controller.updateCharacterCount(),
       ),
     );
   }
