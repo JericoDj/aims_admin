@@ -296,11 +296,21 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     print("📌 Firestore Path: stock/$category/items/$itemName");
 
     try {
+
+      String generateDocumentId(String brand, String itemName) {
+        return brand.trim().toLowerCase().replaceAll(RegExp(r'[^\w]'), "_") +
+            "_" +
+            itemName.trim().toLowerCase().replaceAll(RegExp(r'[^\w]'), "_");
+      }
+      String documentId = generateDocumentId(brand, itemName);
+      String sanitizedCategory = category.replaceAll(" ", "_");
+
       DocumentReference itemRef = FirebaseFirestore.instance
           .collection('stock')
-          .doc(category)
+          .doc(sanitizedCategory)
           .collection('items')
-          .doc(itemName);
+          .doc(documentId);
+
 
       DocumentSnapshot itemSnapshot = await itemRef.get();
 

@@ -36,9 +36,10 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
 
         String category = data["Category"] ?? "Uncategorized";
         String itemName = data["Item Name"] ?? "Unknown";
+        String brand = data["Brand"] ?? "Unknown"; // ✅ Fetch Brand
         String action = data["Action"] ?? "Unknown";
+
         // Handle different quantity fields based on action
-        // Fixed quantity parsing
         int quantity = 0;
         if (action == "Add Stock") {
           quantity = (data["Quantity Added"] is num)
@@ -50,31 +51,31 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
               : int.tryParse(data["Quantity"]?.toString() ?? '0') ?? 0;
         }
 
-        // ✅ Ensure correct date field is used
+        // Use correct date field
         String date = action == "Generate QR Code"
             ? data["Date Generated"] ?? "No Date"
             : data["Date Updated"] ?? "No Date";
 
-        // ✅ Store in recent usage list
+        // ✅ Add to usage list including brand
         usageList.add({
           "Item Name": itemName,
-          "Quantity": quantity.toString(), // ✅ Renamed from "Stock" to "Quantity"
+          "Brand": brand, // ✅ Included
+          "Quantity": quantity.toString(),
           "Category": category,
           "Action": action,
           "Date": date,
+          if (data.containsKey("Quantity Added")) "Quantity Added": data["Quantity Added"],
+          if (data.containsKey("New Total")) "New Total": data["New Total"],
         });
 
-        // Add category to set (avoiding duplicates)
         uniqueCategories.add(category);
 
-        // Add to category usage count
         if (!usageData.containsKey(category)) {
           usageData[category] = [];
         }
         usageData[category]!.add(quantity);
       }
 
-      // Ensure "All" category includes all values
       usageData["All"] = usageData.values.expand((list) => list).toList();
 
       setState(() {
@@ -243,6 +244,7 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
                   : "Quantity: ${item["Quantity"]}",
               style: TextStyle(color: MyColors.red),
             ),
+            Text("Brand: ${item["Brand"] ?? "N/A"}"), // ✅ Add this line
             Text("Category: ${item["Category"]}"),
             Text("Action: ${item["Action"]}"),
             Text("Date: ${item["Date"]}"),
@@ -271,6 +273,7 @@ class _HistoryChartScreenState extends State<HistoryChartScreen> {
           else
             _buildDetailRow("Quantity:", item["Quantity"] ?? "N/A"),
           _buildDetailRow("Item Name:", item["Item Name"] ?? "N/A"),
+          _buildDetailRow("Brand:", item["Brand"] ?? "N/A"), // ✅ New line
           _buildDetailRow("Action:", item["Action"] ?? "N/A"),
           _buildDetailRow("Category:", item["Category"] ?? "N/A"),
           if (item["Action"] == "Add Stock" && item["Quantity Added"] != null)

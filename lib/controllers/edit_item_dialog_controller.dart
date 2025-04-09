@@ -1,64 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../utils/notification_controller.dart';
 
 class EditItemController extends GetxController {
   TextEditingController quantityController = TextEditingController();
   TextEditingController expirationController = TextEditingController();
 
-  /// **Update Firestore with new quantity and expiration date**
-  void updateItemInFirestore(String category, String itemName) async {
+  /// ✅ Helper to sanitize Firestore IDs (matches your QR generator)
+  String generateDocumentId(String brand, String itemName) {
+    return brand.trim().toLowerCase().replaceAll(RegExp(r'[^\w]'), "_") +
+        "_" +
+        itemName.trim().toLowerCase().replaceAll(RegExp(r'[^\w]'), "_");
+  }
+
+
+  /// ✅ Main Firestore Update Logic
+  void updateItemInFirestore(String category, String itemName, String brand) async {
     try {
-      if (category.isEmpty || itemName.isEmpty) {
-        Get.snackbar("Error", "Category or Item Name is missing!");
+      if (category.isEmpty || itemName.isEmpty || brand.isEmpty) {
+        Get.snackbar("Error", "Category, Item Name, or Brand is missing!");
         return;
       }
 
-      print("🛠️ Updating Firestore...");
-      print("Category: $category, Item: $itemName");
-      print("Quantity: ${quantityController.text}, Expiration: ${expirationController.text}");
+      final String documentId = generateDocumentId(brand, itemName);
+      final String sanitizedCategory = category.replaceAll(" ", "_");
 
-      // Reference the Firestore document
-      DocumentReference itemRef = FirebaseFirestore.instance
-          .collection("categories")
-          .doc(category)
+      print("🛠️ Updating Firestore at:");
+      print("→ stock/$sanitizedCategory/items/$documentId");
+      print("→ Quantity to add: ${quantityController.text}");
+      print("→ Expiration: ${expirationController.text}");
+
+      final itemRef = FirebaseFirestore.instance
+          .collection("stock")
+          .doc(sanitizedCategory)
           .collection("items")
-          .doc(itemName);
+          .doc(documentId);
 
-      DocumentSnapshot itemSnapshot = await itemRef.get();
+      final itemSnapshot = await itemRef.get();
+
       if (!itemSnapshot.exists) {
-        print("❌ Error: Item does not exist in Firestore.");
-        Get.snackbar("Error", "Item does not exist in Firestore.");
+        print("❌ Error: Document does not exist at the expected path.");
+        Get.snackbar("Error", "Item not found in Firestore.");
         return;
       }
 
-      int currentStock = int.tryParse(itemSnapshot.get("available_stock").toString()) ?? 0;
-      int addedQuantity = int.tryParse(quantityController.text) ?? 0;
-      int updatedStock = currentStock + addedQuantity;
+      final currentQuantity = int.tryParse(itemSnapshot.get("quantity").toString()) ?? 0;
+      final addedQuantity = int.tryParse(quantityController.text.trim()) ?? 0;
+      final updatedQuantity = currentQuantity + addedQuantity;
 
-      // Update Firestore
+      // 🔄 Update Firestore document
       await itemRef.update({
-        "available_stock": updatedStock,
-        "expiration_date": expirationController.text.isNotEmpty ? expirationController.text : "N/A",
+        "quantity": updatedQuantity,
+        "expiration_date":
+        expirationController.text.trim().isNotEmpty ? expirationController.text.trim() : "N/A",
       });
 
-      // **Send Notification to All Users**
-      NotificationController notificationController = Get.find(); // Get the controller instance
+      print("✅ Updated successfully: New Quantity = $updatedQuantity");
+
+      // 🔔 Send notification
+      final NotificationController notificationController = Get.find();
       await notificationController.sendNotificationToAllUsers(
-          "Update from: $itemName",
-          "${quantityController.text}, Expiration: ${expirationController.text}. Check it out!"
+        "Stock Updated: $itemName",
+        "Added $addedQuantity units → Total: $updatedQuantity",
       );
 
-      // Fetch the updated document and print it
-      DocumentSnapshot updatedSnapshot = await itemRef.get();
-      print("✅ Firestore update successful! New Data:");
-      print("📌 Item: $itemName");
-      print("📦 Available Stock: ${updatedSnapshot.get("available_stock")}");
-      print("📅 Expiration Date: ${updatedSnapshot.get("expiration_date")}");
-
-      Get.snackbar("Success", "Item updated successfully.");
+      Get.snackbar("Success", "$itemName stock updated!", snackPosition: SnackPosition.BOTTOM);
 
     } catch (e) {
       print("❌ Error updating Firestore: $e");

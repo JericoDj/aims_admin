@@ -5,12 +5,14 @@ import '../../controllers/edit_item_dialog_controller.dart';
 class EditItemDialog extends StatelessWidget {
   final String category;
   final String itemName;
+  final String brand;
   final Map<String, String> itemData;
 
   EditItemDialog({
     required this.category,
     required this.itemName,
     required this.itemData,
+    required this.brand,
   });
 
   @override
@@ -71,7 +73,7 @@ class EditItemDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () {
-            controller.updateItemInFirestore(category, itemName);
+            controller.updateItemInFirestore(category, itemName, brand);
             Get.back();
           },
           child: Text("UPDATE", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),

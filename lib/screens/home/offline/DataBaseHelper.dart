@@ -17,27 +17,34 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // ⬅️ Bump the version
       onCreate: (db, version) async {
         await db.execute('''
-          CREATE TABLE $tableName (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            storageCode TEXT,
-            serialNo TEXT,
-            itemName TEXT,
-            brand TEXT,
-            expirationDate TEXT,
-            unitMeasurement TEXT,
-            specification TEXT,
-            quantity INTEGER,
-            timestamp TEXT
-          )
-        ''');
+      CREATE TABLE $tableName (
+        category TEXT,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        storageCode TEXT,
+        serialNo TEXT,
+        itemName TEXT,
+        brand TEXT,
+        expirationDate TEXT,
+        unitMeasurement TEXT,
+        specification TEXT,
+        quantity INTEGER,
+        timestamp TEXT
+      )
+    ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Safely add the category column
+          await db.execute('ALTER TABLE $tableName ADD COLUMN category TEXT');
+        }
       },
     );
-  }
+}
 
-  // ✅ Get single item by ID
+    // ✅ Get single item by ID
   Future<Map<String, dynamic>?> getDataById(int id) async {
     final db = await database;
     final results = await db.query(
