@@ -258,19 +258,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     String expirationDate = expirationController.text.trim();
     String dateUpdated = DateTime.now().toIso8601String();
 
-    // Create unique ID using name and brand
-    String documentId = "${itemName}_$brand"
-        .replaceAll(" ", "_")
-        .replaceAll(":", "_")
-        .toLowerCase();
-
-    DocumentReference itemRef = FirebaseFirestore.instance
-        .collection('stock')
-        .doc(category)
-        .collection('items')
-        .doc(documentId); // Use combined ID
-
-    // Sanitize names for Firestore path
+    // Sanitize names for Firestore path, but preserve case
     category = category.replaceAll(" ", "_").replaceAll(":", "_");
     itemName = itemName.replaceAll(" ", "_").replaceAll(":", "_");
 
@@ -281,8 +269,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
 
     if (brand.isEmpty) {
-      Get.snackbar("Error", "Brand information is missing",
-          backgroundColor: Colors.red);
+      Get.snackbar("Error", "Brand information is missing", backgroundColor: Colors.red);
       return;
     }
 
@@ -293,24 +280,21 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       return;
     }
 
+    // Print Firestore Path for debugging
     print("📌 Firestore Path: stock/$category/items/$itemName");
 
     try {
-
-      String generateDocumentId(String brand, String itemName) {
-        return brand.trim().toLowerCase().replaceAll(RegExp(r'[^\w]'), "_") +
-            "_" +
-            itemName.trim().toLowerCase().replaceAll(RegExp(r'[^\w]'), "_");
-      }
-      String documentId = generateDocumentId(brand, itemName);
-      String sanitizedCategory = category.replaceAll(" ", "_");
+      // Use a single document ID generation method but preserve case for itemName and brand
+      String documentId = _generateDocumentId(brand, itemName);
 
       DocumentReference itemRef = FirebaseFirestore.instance
           .collection('stock')
-          .doc(sanitizedCategory)
+          .doc(category)
           .collection('items')
-          .doc(documentId);
+          .doc(documentId); // Use sanitized and consistent ID
 
+      // Print the full Firestore path where it is trying to save
+      print("📌 Trying to access Firestore Path: ${itemRef.path}");
 
       DocumentSnapshot itemSnapshot = await itemRef.get();
 
@@ -344,10 +328,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       }
 
       // Update Firestore with merged data
-      await itemRef.update(updateData);  // Changed to update() instead of set()
-
-      // Update Firestore with merged data
-      await itemRef.set(updateData, SetOptions(merge: true));
+      await itemRef.update(updateData);  // Use update() to update fields only
 
       setState(() {
         scannedItem['quantity'] = updatedQuantity.toString();
@@ -385,6 +366,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       Get.snackbar("Error", "Failed to update item: $e",
           backgroundColor: Colors.red, colorText: Colors.white);
     }
+  }
+
+  /// ✅ Helper function to generate Document ID without changing case
+  String _generateDocumentId(String brand, String itemName) {
+    return brand.trim().replaceAll(RegExp(r'[^\w]'), "_") +
+        "_" +
+        itemName.trim().replaceAll(RegExp(r'[^\w]'), "_");
   }
 
 

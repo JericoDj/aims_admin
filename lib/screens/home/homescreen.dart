@@ -61,10 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   }
 
-
-
-
-// Function to check low stock and near-expiry items
   Future<void> checkLowStockAndNearExpiry() async {
     try {
       final now = DateTime.now();
@@ -116,16 +112,23 @@ class _HomeScreenState extends State<HomeScreen> {
         // === 🔔 Near Expiry Check ===
         final stockSnapshot = await FirebaseFirestore.instance
             .collectionGroup('items')
-            .where('expiry_alert_days', isGreaterThan: 0)
             .get();
 
         List<Map<String, dynamic>> nearlyExpiringItems = [];
+        List<Map<String, dynamic>> lowStockItems = [];
+        List<Map<String, dynamic>> allStockGood = [];
 
         for (var doc in stockSnapshot.docs) {
           final itemData = doc.data();
 
-          DateTime expirationDate;
+          final itemName = itemData['item_name'] ?? 'Unnamed';
+          final brand = itemData['brand'] ?? '';
+          final quantity = itemData['quantity'] ?? 0;
+          final minRequired = itemData['minimum_quantity'] ?? 0;
           final expiryRaw = itemData['expiration_date'];
+          final expiryAlertDays = itemData['expiry_alert_days'] ?? 0;
+
+          DateTime expirationDate;
           if (expiryRaw is Timestamp) {
             expirationDate = expiryRaw.toDate();
           } else if (expiryRaw is String) {
@@ -134,12 +137,13 @@ class _HomeScreenState extends State<HomeScreen> {
             expirationDate = DateTime(2000);
           }
 
-          final expiryAlertDays = itemData['expiry_alert_days'] ?? 0;
           final alertDate = expirationDate.subtract(Duration(days: expiryAlertDays));
 
-          if (alertDate.isBefore(now) || alertDate.isAtSameMomentAs(now)) {
-            final itemName = itemData['item_name'] ?? 'Unnamed';
-            final brand = itemData['brand'] ?? '';
+          final isNearExpiry = expiryAlertDays > 0 &&
+              (alertDate.isBefore(now) || alertDate.isAtSameMomentAs(now));
+          final isLowStock = quantity < minRequired;
+
+          if (isNearExpiry) {
             nearlyExpiringItems.add({
               'name': itemName,
               'brand': brand,
@@ -147,40 +151,66 @@ class _HomeScreenState extends State<HomeScreen> {
               'alertFrom': alertDate.toIso8601String(),
             });
           }
+
+          if (isLowStock) {
+            lowStockItems.add({
+              'name': itemName,
+              'brand': brand,
+              'quantity': quantity,
+              'minimum': minRequired,
+            });
+          }
+
+          if (!isNearExpiry && !isLowStock) {
+            allStockGood.add({
+              'name': itemName,
+              'brand': brand,
+              'quantity': quantity,
+              'expiry': expirationDate.toIso8601String(),
+            });
+          }
         }
 
+        // 🔔 Print summaries
         if (nearlyExpiringItems.isNotEmpty) {
           print("📋 NEARLY EXPIRING ITEMS:");
           for (var item in nearlyExpiringItems) {
-            print("🔸 ${item['name']} (${item['brand']}) - "
-                "Expires: ${item['expiry']} | Alert From: ${item['alertFrom']}");
+            print("🔸 ${item['name']} (${item['brand']}) - Expires: ${item['expiry']}");
           }
-        } else {
-          print("✅ No items are nearing expiry today.");
         }
 
-        // === 📉 Low Stock Check ===
-        // Add your low stock check logic here if needed...
+        if (lowStockItems.isNotEmpty) {
+          print("📋 LOW STOCK ITEMS:");
+          for (var item in lowStockItems) {
+            print("🔸 ${item['name']} (${item['brand']}) - Qty: ${item['quantity']} (Min: ${item['minimum']})");
+          }
+        }
 
-        // ✅ Send notification
-        NotificationController notificationController = Get.find();
-        await notificationController.sendNotificationToAllUsers(
-          "Stock Alert: Low Stock & Near Expiry",
-          "Some items are low or near expiry. Check inventory!",
-        );
+        if (nearlyExpiringItems.isEmpty && lowStockItems.isEmpty) {
+          print("✅ All items are in good stock and not expiring.");
+          await Get.find<NotificationController>().sendNotificationToAllUsers(
+            "Stock Update",
+            "✅ All items are in good condition. No low stock or expiry alerts today.",
+          );
+        } else {
+          await Get.find<NotificationController>().sendNotificationToAllUsers(
+            "Stock Alert",
+            "⚠️ ${lowStockItems.length} low stock and ${nearlyExpiringItems.length} near-expiry items. Check inventory!",
+          );
+        }
 
         // ✅ Update indicators
-        await FirebaseFirestore.instance
-            .collection('indicators')
-            .doc('lowStock')
-            .set({'dateTime': now, 'haveChecked': true});
+        await FirebaseFirestore.instance.collection('indicators').doc('lowStock').set({
+          'dateTime': now,
+          'haveChecked': true,
+        });
 
-        await FirebaseFirestore.instance
-            .collection('indicators')
-            .doc('nearExpiry')
-            .set({'dateTime': now, 'haveChecked': true});
+        await FirebaseFirestore.instance.collection('indicators').doc('nearExpiry').set({
+          'dateTime': now,
+          'haveChecked': true,
+        });
 
-        print("✅ Stock check and notification sent.");
+        print("✅ Stock check complete.");
       } else {
         print("⏳ Already checked today. Skipping.");
       }
@@ -188,7 +218,6 @@ class _HomeScreenState extends State<HomeScreen> {
       print("❌ Error checking stock or expiry: $e");
     }
   }
-
 
 
 
