@@ -107,6 +107,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
           .address;
 
       await _localServer.startServer();
+      _loadOfflineData();
 
       // ✅ Make sure the reactive state is updated so UI shows server status
       setState(() {

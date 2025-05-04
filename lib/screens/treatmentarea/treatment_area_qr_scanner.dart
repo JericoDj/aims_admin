@@ -143,73 +143,103 @@ class _TreatmentQRScannerScreenState extends State<TreatmentQRScannerScreen> {
 
   /// ✅ Function to Show Dialog for Used Items
   void showUsedItemsDialog(BuildContext context) {
-
+    bool _isSaving = false; // Local flag inside the dialog
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Center(
-            child: Text(
-              "Log Used Items",
-              style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red, fontSize: 24),
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow("Item Name", scannedItem['item_name'] ?? "N/A"),
-                _buildDetailRow("Brand", scannedItem['brand'] ?? "N/A"),
-                _buildDetailRow("Category", scannedItem['category'] ?? "N/A"),
-                _buildDetailRow("Unit", scannedItem['unit_measurement'] ?? "N/A"),
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (BuildContext context, void Function(void Function()) setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: Center(
+                child: Text(
+                  "Log Used Items",
+                  style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red, fontSize: 24),
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailRow("Item Name", scannedItem['item_name'] ?? "N/A"),
+                    _buildDetailRow("Brand", scannedItem['brand'] ?? "N/A"),
+                    _buildDetailRow("Category", scannedItem['category'] ?? "N/A"),
+                    _buildDetailRow("Unit", scannedItem['unit_measurement'] ?? "N/A"),
+                    SizedBox(height: 15),
+                    Text("Quantity Used", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
+                    SizedBox(height: 5),
+                    TextField(
+                      controller: usedQuantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: "Enter quantity used",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                    setDialogState(() {
+                      _isSaving = true;
+                    });
 
-                SizedBox(height: 15),
+                    await Future.delayed(Duration(milliseconds: 200)); // Let spinner show
+                    await _logUsedItems();
 
-                Text("Quantity Used", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
-                SizedBox(height: 5),
-                TextField(
-                  controller: usedQuantityController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: "Enter quantity used",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    if (context.mounted) {
+                      Navigator.pop(dialogContext); // Close the dialog
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MyColors.red,
+                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                   ),
-                  style: TextStyle(fontSize: 18),
+                  child: _isSaving
+                      ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                      : const Text(
+                    "SAVE",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    _isDialogOpen = false;
+                    Navigator.pop(dialogContext);
+                    Navigator.pop(dialogContext);
+                  },
+                  child: Text("CLOSE", style: TextStyle(color: MyColors.red, fontSize: 18)),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                _logUsedItems();
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MyColors.red,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-              ),
-              child: Text("SAVE", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            TextButton(
-              onPressed: () {
-                _isDialogOpen = false;
-                Navigator.pop(context);
-              },
-              child: Text("CLOSE", style: TextStyle(color: MyColors.red, fontSize: 18)),
-            ),
-          ],
+            );
+          },
         );
       },
     );
   }
 
+
   /// ✅ Function to Log Used Items and Update Firestore
   /// ✅ Function to Log Used Items, Update Firestore, and Save to History
-  void _logUsedItems() async {
+  Future<void> _logUsedItems() async {
     if (scannedItem.isEmpty) return;
 
     String category = scannedItem['category'] ?? "";

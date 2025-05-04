@@ -17,7 +17,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
 
   bool _isDialogOpen = false; // ✅ Flag to prevent multiple scans
-
+  bool _isSaving = false;
   Map<String, String> scannedItem = {}; // Stores scanned item data
   TextEditingController quantityController = TextEditingController();
   TextEditingController expirationController = TextEditingController();
@@ -159,96 +159,110 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     _isDialogOpen = true; // ✅ Set flag to true to prevent re-scanning
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Center(
-            child: Text(
-              "Add Item Quanity",
-              style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red, fontSize: 24),
+        context: context,
+        builder: (BuildContext dialogContext) {
+      return StatefulBuilder(
+        builder: (BuildContext context, void Function(void Function()) setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow("Item Name", scannedItem['item_name'] ?? "N/A"),
-                _buildDetailRow("Brand", scannedItem['brand'] ?? "N/A"),
-                _buildDetailRow("Category", scannedItem['category'] ?? "N/A"),
-                _buildDetailRow("Unit", scannedItem['unit_measurement'] ?? "N/A"),
-
-
-                SizedBox(height: 15),
-
-
-                Text("Enter Quantity", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
-                SizedBox(height: 5),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: quantityController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: "Enter quantity",
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        ),
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                    SizedBox(width: 10),
-
-                  ],
-                ),
-
-
-                SizedBox(height: 15),
-
-                Text("Enter Expiration Date", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
-                SizedBox(height: 5),
-                TextField(
-                  controller: expirationController,
-                  keyboardType: TextInputType.datetime,
-                  decoration: InputDecoration(
-                    hintText: "YYYY-MM-DD",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  style: TextStyle(fontSize: 18),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                _saveUpdatedData();
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MyColors.red,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+            title: Center(
+              child: Text(
+                "Add Item Quantity",
+                style: TextStyle(fontWeight: FontWeight.bold, color: MyColors.red, fontSize: 24),
               ),
-              child: Text("SAVE", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text("CLOSE", style: TextStyle(color: MyColors.red, fontSize: 18)),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDetailRow("Item Name", scannedItem['item_name'] ?? "N/A"),
+                  _buildDetailRow("Brand", scannedItem['brand'] ?? "N/A"),
+                  _buildDetailRow("Category", scannedItem['category'] ?? "N/A"),
+                  _buildDetailRow("Unit", scannedItem['unit_measurement'] ?? "N/A"),
+                  SizedBox(height: 15),
+                  Text("Enter Quantity", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
+                  SizedBox(height: 5),
+                  TextField(
+                    controller: quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: "Enter quantity",
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  SizedBox(height: 15),
+                  Text("Enter Expiration Date", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: MyColors.red)),
+                  SizedBox(height: 5),
+                  TextField(
+                    controller: expirationController,
+                    keyboardType: TextInputType.datetime,
+                    decoration: InputDecoration(
+                      hintText: "YYYY-MM-DD",
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ],
+              ),
             ),
-          ],
-        );
-      },
-    );
+            actions: [
+              ElevatedButton(
+                onPressed: _isSaving
+                    ? null
+                    : () async {
+                  setDialogState(() {
+                    _isSaving = true;
+                  });
+
+                  await _saveUpdatedData();
+
+                  if (mounted) {
+                    Navigator.pop(dialogContext);
+                  }
+
+                  _isSaving = false;
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MyColors.red,
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 2.5,
+                  ),
+                )
+                    : const Text(
+                  "SAVE",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: Text("CLOSE", style: TextStyle(color: MyColors.red, fontSize: 18)),
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 
-  void _saveUpdatedData() async {
+  Future<void> _saveUpdatedData() async {
     if (scannedItem.isEmpty) return;
 
     String itemName = scannedItem['item_name'] ?? "";
@@ -358,6 +372,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           "Stock Added: $itemName",
           "Added $newQuantity → Total: $updatedQuantity"
       );
+      _isDialogOpen = false;
 
       print("📢 Notification sent!");
 
