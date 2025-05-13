@@ -252,6 +252,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(dialogContext);
+                  Navigator.pop(dialogContext);
                 },
                 child: Text("CLOSE", style: TextStyle(color: MyColors.red, fontSize: 18)),
               ),

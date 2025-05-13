@@ -47,6 +47,7 @@ class EditItemController extends GetxController {
 
       final currentQuantity = int.tryParse(itemSnapshot.get("quantity").toString()) ?? 0;
       final addedQuantity = int.tryParse(quantityController.text.trim()) ?? 0;
+
       final updatedQuantity = currentQuantity + addedQuantity;
 
       // 🔄 Update Firestore document

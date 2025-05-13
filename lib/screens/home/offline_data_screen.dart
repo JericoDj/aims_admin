@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../../utils/colors.dart';
+import '../../utils/notification_controller.dart';
 import 'offline/DataBaseHelper.dart';
 import 'offline/connect_to_offline_controller.dart';
 import 'offline/local_server.dart';
@@ -114,14 +115,12 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
         _isServerRunning.value = true;
         _serverIp.value = ip;
       });
-
       Get.snackbar(
         "Server Started",
-        "Connect to IP: $ip:8080",
+        "",
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
-
       print('✅ Server started at: http://$ip:8080');
     } catch (e) {
       _isServerRunning.value = false;
@@ -843,9 +842,18 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                                           _offlineData.removeWhere((e) => e['id'] == item['id']);
                                           setState(() {});
 
+
+
+                                         Navigator.pop(context);
                                           Get.snackbar("Uploaded", "$itemName uploaded successfully",
                                               backgroundColor: Colors.orange, colorText: Colors.white);
-                                          Get.back();
+                                          // 🔔 Send notification
+
+                                          final NotificationController notificationController = Get.find();
+                                          await notificationController.sendNotificationToAllUsers(
+                                            "Stock Updated: $itemName",
+                                            "Added $existingQty units",
+                                          );
                                         } catch (e) {
                                           print("❌ Upload error: $e");
                                           Get.snackbar("Error", "Failed to upload item: ${e.toString()}",
