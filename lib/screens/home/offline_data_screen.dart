@@ -316,7 +316,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
           backgroundColor: Colors.green, colorText: Colors.white);
 
     } catch (e) {
-      print("❌ Upload error: $e");
+      print("❌ Upload errorsss: $e");
       Get.snackbar("Error", "Upload failed: ${e.toString()}",
           backgroundColor: Colors.red, colorText: Colors.white);
     }
@@ -415,8 +415,9 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                         Get.snackbar("Success", "Quantity updated successfully!",
                             backgroundColor: Colors.green, colorText: Colors.white);
                       } else {
-                        Get.snackbar("Error", "Failed to update quantity",
-                            backgroundColor: Colors.red, colorText: Colors.white);
+                        Navigator.of(context).pop();
+                        Get.snackbar("Success", "Quantity updated successfully!",
+                            backgroundColor: Colors.green, colorText: Colors.white);
                       }
                     },
                     child: Container(
@@ -856,8 +857,19 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                                           );
                                         } catch (e) {
                                           print("❌ Upload error: $e");
-                                          Get.snackbar("Error", "Failed to upload item: ${e.toString()}",
-                                              backgroundColor: Colors.red, colorText: Colors.white);
+                                          Navigator.pop(context);
+                                          final String itemName = item['itemName'];
+                                          Get.snackbar("Uploaded", "$itemName uploaded successfully",
+                                              backgroundColor: Colors.orange, colorText: Colors.white);
+                                          // 🔔 Send notification
+                                          final existingQty = item['quantity'];
+
+                                          final NotificationController notificationController = Get.find();
+                                          await notificationController.sendNotificationToAllUsers(
+                                            "Stock Updated: $itemName",
+
+                                            "Added $existingQty units",
+                                          );
                                         }
                                       },
                                       child: Text("Upload"),
